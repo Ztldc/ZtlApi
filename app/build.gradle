@@ -1,0 +1,76 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 29
+    buildToolsVersion "29.0.3"
+
+    defaultConfig {
+        minSdkVersion 19
+        targetSdkVersion 29
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    //执行lint检查，有任何的错误或者警告提示，都会终止构建
+    lintOptions {
+        abortOnError false
+    }
+
+    //混淆代码
+   /* buildTypes {
+        release {
+            minifyEnabled true
+            zipAlignEnabled true  // Zipalign优化
+            //shrinkResources true // 移除无用的resource文件,必须和minifyEnabled 一起使用
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            zipAlignEnabled false  // Zipalign优化
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }*/
+
+    //以下是为了找到android.os.SystemProperties这个隐藏的类
+    String SDK_DIR = System.getenv("ANDROID_SDK_HOME")
+    //("TAG", "SDK_DIR = " + SDK_DIR );
+    if(SDK_DIR == null) {
+        Properties props = new Properties()
+        props.load(new FileInputStream(project.rootProject.file("local.properties")))
+        SDK_DIR = props.get('sdk.dir');
+    }
+    dependencies {
+        provided files("${SDK_DIR}/platforms/android-21/data/layoutlib.jar")
+    }
+    //以上是为了找到android.os.SystemProperties这个隐藏的类
+
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+}
+
+//生成jar包
+task makeJar(type: Jar) {
+    //生成的jar的名称
+    getArchiveFileName().set( 'ZtlApi.jar')
+
+    //需要合并的jar的路径+名称
+    //from(project.zipTree('build/intermediates/compile_library_classes/debug/classes.jar'))
+    //from(project.zipTree('build/intermediates/aar_main_jar/release/classes.jar')) //混淆的jar
+    from(project.zipTree('build/intermediates/aar_main_jar/debug/classes.jar'))
+
+    //输出到的位置
+    //getDestinationDirectory().set(file('build/lib'))\TestAPI\libs
+    getDestinationDirectory().set(file('../TestAPI/libs'))  //这里输出位置直接替换掉正在使用的jar
+}
+
+makeJar.dependsOn(build)
