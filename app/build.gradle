@@ -70,7 +70,7 @@ task makeJar(type: Jar) {
 
     //输出到的位置
     //getDestinationDirectory().set(file('build/lib'))\TestAPI\libs
-    getDestinationDirectory().set(file('../app/libs'))  //这里输出位置直接替换掉正在使用的jar
+    getDestinationDirectory().set(file('../app/libs'))  //输出jar到/app/libs/目录
 }
 
 makeJar.dependsOn(build)
