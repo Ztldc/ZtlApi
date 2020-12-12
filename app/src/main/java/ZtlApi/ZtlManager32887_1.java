@@ -31,9 +31,6 @@ public class ZtlManager32887_1 extends ZtlManager {
             "/sys/devices/platform/display-subsystem/drm/card0/card0-VGA-1/modes";
     private final static String SYS_NODE_VGA_MODE =
             "/sys/devices/platform/display-subsystem/drm/card0/card0-VGA-1/mode";
-    private final static String SYS_NODE_VGA_STATUS =
-            "/sys/devices/platform/display-subsystem/drm/card0/card0-VGA-1/status";
-    private final static String PROP_RESOLUTION_HDMI = "persist.sys.resolution.aux";
 
     private List<String> readStrListFromFile(String pathname) throws IOException {
         List<String> fileStrings = new ArrayList<>();
