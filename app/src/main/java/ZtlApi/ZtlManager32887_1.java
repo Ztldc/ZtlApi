@@ -79,7 +79,7 @@ public class ZtlManager32887_1 extends ZtlManager {
     }
 
     @Override
-    //系统-打开/关闭导航栏状态栏         1：当前隐藏 0：当前显示
+    //系统-打开/关闭导航栏状态栏
     public void openSystemBar(boolean bOpen) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
@@ -124,9 +124,9 @@ public class ZtlManager32887_1 extends ZtlManager {
     public boolean isSystemBarOpen() {
         String state = SystemProperties.get(SYSTEM_BAR_STATE);
         if (state.equals(SYSTEM_BAR_SHOW)) {
-            return false;
-        } else if (state.equals(SYSTEM_BAR_HIDE)) {
             return true;
+        } else if (state.equals(SYSTEM_BAR_HIDE)) {
+            return false;
         }
         return false;
     }
