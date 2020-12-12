@@ -73,8 +73,9 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
-//20201127 修改获取U盘路径接口，7.1进入/storage/,5.1进入/mnt/usb_storage/。测试通过
-//20201124 修改3288-7.1获取U盘路径接口，前面的有bug，不插入U盘时会返回/storage/emulated。
+//20201211 修改3399 OTG口状态、USB调试状态 接口读取的节点
+//20201127 修改获取U盘路径接口，7.1进入/storage/,5.1进入/mnt/usb_storage/ 测试通过
+//20201124 修改3288-7.1获取U盘路径接口，前面的有bug，不插入U盘时会返回/storage/emulated
 //20201110 添加A33/A64的GPIO接口
 //20201107 修改定时关机的Log，month需要+1 才是正常的时间
 //20201017 增加一个api enable4GReset(boolean) 用于启用/禁用4G自动重连
@@ -103,7 +104,6 @@ import static java.util.Calendar.YEAR;
 //20200820 添加获取联网方式接口，-1=未知 0=以太网 1=wifi 2=2G 3=3G 4=4G 5=5G
 //20200813 定时开关机函数添加发送广播方式，Helper负责执行定时开关机。
 //20200731 添加静默安装并重启、静默安装启动APP等函数。
-//20200730 添加同步网络时间函数，发送广播，Helper负责执行同步网络时间。
 //20200724 添加安装重启接口，发送安装广播，收到广播后进行安装与重启。
 //20200722 添加时间-立刻同步网络时间、自定义同步周期，都是发送广播版本
 //         需要配合智通利助手使用或者接收广播的方式。
@@ -625,8 +625,8 @@ public class ZtlManager {
                 try {
                     result = _execCmdAsSU("testsu", cmd);
                 } catch (Exception ex) {
-                    e.printStackTrace();
                     Log.e(TAG, "此函数连接失败，请联系厂家解决");
+                    e.printStackTrace();
                 }
             } else {
                 Log.e(TAG, "testsu的权限不通过");
@@ -1212,7 +1212,6 @@ public class ZtlManager {
         }
         execRootCmdSilent("wm density " + dpis);
         setSystemProperty(LCD_DENSITY_PROP, lcdDensity);
-        execRootCmdSilent("reboot");
 /*
 	   Intent intent2=new Intent(Intent.ACTION_REBOOT);
 	   intent2.putExtra("nowait", 1);

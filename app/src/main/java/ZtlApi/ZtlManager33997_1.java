@@ -29,11 +29,17 @@ public class ZtlManager33997_1 extends ZtlManager{
 	@Override
 	public boolean isUsbDebugOpen() {
 		String state = getSystemProperty("persist.usb.mode", "1");
+		if (state.contains("1")) {
+			return false;
+		}
+		return true;
+
+		/*String state = getSystemProperty("persist.usb.mode", "1");
 		int instate = Integer.valueOf(state).intValue();
 		if (instate == 1) {
 			return true;
 		}
-		return false;
+		return false;*/
 	}
 
 	//获取USB调试状态	1
@@ -51,13 +57,10 @@ public class ZtlManager33997_1 extends ZtlManager{
 	//获取OTG口连接状态 勾的时候是2 不勾的时候是1
 	@Override
 	public boolean getUSBtoPC(){
-		try {
-			String state = loadFileAsString("/sys/kernel/debug/usb@fe800000/rk_usb_force_mode");
-			if (state.equals("2")){
-				return true;
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+		//String state = loadFileAsString("/sys/kernel/debug/usb@fe800000/rk_usb_force_mode");
+		String state = getSystemProperty("persist.usb.mode","");
+		if (state.equals("2")){
+			return true;
 		}
 		return false;
 	}

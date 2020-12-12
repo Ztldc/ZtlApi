@@ -46,7 +46,6 @@ public class Gpio {
         if (nValue == -1){
             return false;
         }
-        Log.e("GPIO","value" + nValue);
         this.mPort = nValue;
         this.mGpioExport = new File(this.gpio_export);
         this.mGpioUnExport = new File(this.gpio_unexport);
