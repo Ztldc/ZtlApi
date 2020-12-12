@@ -1,2 +1,4 @@
 rootProject.name='ZTLLib'
 include ':app'
+include 'TestLib'
+include 'TestAPI'
