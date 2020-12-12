@@ -128,7 +128,7 @@ public class ZtlManager32887_1 extends ZtlManager {
         } else if (state.equals(SYSTEM_BAR_HIDE)) {
             return false;
         }
-        return false;
+        return true;
     }
 
     //获取状态栏状态	1

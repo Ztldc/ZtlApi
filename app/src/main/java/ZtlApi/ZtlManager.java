@@ -73,7 +73,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
-//20201212 修改：获取导航栏状态栏状态 返回值
+//20201212 修改3288-7.1 获取导航栏状态栏状态 返回值
 //20201211 修改3399 OTG口状态、USB调试状态 接口读取的节点
 //20201127 修改获取U盘路径接口，7.1进入/storage/,5.1进入/mnt/usb_storage/ 测试通过
 //20201124 修改3288-7.1获取U盘路径接口，前面的有bug，不插入U盘时会返回/storage/emulated
