@@ -73,6 +73,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
+//20201215 添加获取剩余储存空间接口
 //20201212 修改3288-7.1 获取导航栏状态栏状态 返回值
 //20201211 修改3399 OTG口状态、USB调试状态 接口读取的节点
 //20201127 修改获取U盘路径接口，7.1进入/storage/,5.1进入/mnt/usb_storage/ 测试通过
@@ -244,6 +245,15 @@ public class ZtlManager {
         //经过处理的内存大小
         long b = a / 1024 / 1024 / 1024;    //单位：GB
         return a;//单位：字节
+    }
+
+    //系统-储存-获取剩余内存，单位：字节
+    public long getFreeMemory(){
+        File datapath = Environment.getDataDirectory();
+        StatFs dataFs = new StatFs(datapath.getPath());
+
+        long sizes = (long) dataFs.getFreeBlocks() * (long) dataFs.getBlockSize();
+        return sizes;
     }
 
     //系统-获取运行内存,单位：字节
