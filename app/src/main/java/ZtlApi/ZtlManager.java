@@ -73,6 +73,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
+//20201223 添加设置系统时间接口，参数传入long型,添加定时开机Log
 //20201215 添加获取剩余储存空间接口
 //20201212 修改3288-7.1 获取导航栏状态栏状态 返回值
 //20201211 修改3399 OTG口状态、USB调试状态 接口读取的节点
@@ -119,7 +120,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "2.9";
+        return "3.1";
     }
 
     protected Context mContext;
@@ -247,8 +248,8 @@ public class ZtlManager {
         return a;//单位：字节
     }
 
-    //系统-储存-获取剩余内存，单位：字节
-    public long getFreeMemory(){
+    //系统-储存-获取剩余储存大小，单位：字节
+    public long getFreeMemory() {
         File datapath = Environment.getDataDirectory();
         StatFs dataFs = new StatFs(datapath.getPath());
 
@@ -327,9 +328,9 @@ public class ZtlManager {
         String usbPath = null;
         String usbBasePath = "";
 
-        if (getAndroidVersion().contains("5.1")){
+        if (getAndroidVersion().contains("5.1")) {
             usbBasePath = "/mnt/usb_storage/";
-        } else if (getAndroidVersion().contains("7.1")){
+        } else if (getAndroidVersion().contains("7.1")) {
             usbBasePath = "/storage/";
         }
 
@@ -339,15 +340,15 @@ public class ZtlManager {
                 File[] files = file.listFiles();
                 if (files.length > 0) {
                     List<String> Files1 = new ArrayList<>();
-                    for (int i = 0; i < files.length; i++){
+                    for (int i = 0; i < files.length; i++) {
                         String absPath = files[i].getAbsolutePath();
-                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")){
+                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")) {
                             continue;
-                        }else{
+                        } else {
                             Files1.add(absPath);
                         }
                     }
-                    if (Files1.size() == 0){
+                    if (Files1.size() == 0) {
                         return null;
                     }
                     usbPath = files[0].getAbsolutePath();
@@ -754,10 +755,10 @@ public class ZtlManager {
     }
 
     //APP-卸载后安装
-    public void uninstallAppAndInstall(String filePath, String pkgName){
+    public void uninstallAppAndInstall(String filePath, String pkgName) {
         try {
             execRootCmdSilent("pm uninstall " + pkgName);
-        }catch (Exception e){
+        } catch (Exception e) {
             Log.e(TAG, "uninstall package " + pkgName + " faild");
         }
 
@@ -924,6 +925,24 @@ public class ZtlManager {
     }
 
     //时间-设置系统时间 ->ZtlHelper 绕过权限限制
+    public void setSystemTime(long timeinmili) {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "setSystemTime");//value填的需要和ztlhelper统一
+        intent.putExtra("time", timeinmili);
+        mContext.startService(intent);
+    }
+
+    //时间-设置系统时间 ->ZtlHelper 绕过权限限制
     public void setSystemTime(Calendar cal) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
@@ -1017,6 +1036,7 @@ public class ZtlManager {
             c.setTimeInMillis(0);
 
         _setPowerOn(c.getTimeInMillis() / 1000, true);
+        Log.d("定时开机设置的时间：","" + c.getTimeInMillis() / 1000);
     }
 
     //时间-定时关机-每天
@@ -1068,6 +1088,7 @@ public class ZtlManager {
         }
 
         _setPowerOn(cal.getTimeInMillis() / 1000, false);
+        Log.d("一次性定时开机设置的时间：","" + cal.getTimeInMillis() / 1000);
     }
 
     //时间-定时关机-一次性
@@ -1117,6 +1138,7 @@ public class ZtlManager {
         }
 
         setSystemProperty(POWER_ON_TIME, sec + "");
+        Log.d("设置的时间为：", "" + sec);
         setSystemProperty(IS_OPEN_ALARM, ALARM_ON);
         if (isEveryDay == false) {
             setSystemProperty("persist.sys.iseverydayalarm", "0");
@@ -1391,6 +1413,13 @@ public class ZtlManager {
         return Integer.parseInt(state);
     }
 
+    //显示-获取触摸方向
+    public int getTouchOrientation() {
+        String value = getSystemProperty(TP_ORIENTATION_PROP, "0");
+        int ret = Integer.valueOf(value).intValue();
+        return ret * 90;
+    }
+
     //显示-设置触摸方向
     public void setTouchOrientation(int orientation, boolean rebootnow) {
         orientation /= 90;
@@ -1403,13 +1432,6 @@ public class ZtlManager {
         if (rebootnow) {
             execRootCmdSilent("reboot");
         }
-    }
-
-    //显示-获取触摸方向
-    public int getTouchOrientation() {
-        String value = getSystemProperty(TP_ORIENTATION_PROP, "0");
-        int ret = Integer.valueOf(value).intValue();
-        return ret * 90;
     }
 
     //显示-使能左右分屏功能
