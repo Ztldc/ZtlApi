@@ -73,7 +73,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
-//20201223 添加设置系统时间接口，参数传入long型,添加定时开机log
+//20201223 添加设置系统时间接口，参数传入long型,添加定时开机Log
 //20201215 添加获取剩余储存空间接口
 //20201212 修改3288-7.1 获取导航栏状态栏状态 返回值
 //20201211 修改3399 OTG口状态、USB调试状态 接口读取的节点
