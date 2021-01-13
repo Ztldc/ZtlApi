@@ -73,6 +73,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
+//20210113 添加设置桌面接口、获取设置桌面包名接口
 //20201223 添加设置系统时间接口，参数传入long型,添加定时开机Log
 //20201215 添加获取剩余储存空间接口
 //20201212 修改3288-7.1 获取导航栏状态栏状态 返回值
@@ -120,7 +121,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "3.1";
+        return "3.2";
     }
 
     protected Context mContext;
@@ -476,6 +477,17 @@ public class ZtlManager {
         intent.putExtra("package", pkgage);
         intent.putExtra("activity", Activity);
         mContext.startService(intent);
+    }
+
+    //系统-设置系统桌面.
+    public void setDesktop(String pkgage) {
+        setSystemProperty("persist.ztl.desktopName", pkgage);
+        execRootCmdSilent("sync");
+    }
+
+    //系统-获取设置的系统桌面包名
+    public String getDesktop() {
+        return getSystemProperty("persist.ztl.desktopName", "");
     }
 
     //系统-判断包名对应的APP是否存在
@@ -1036,7 +1048,7 @@ public class ZtlManager {
             c.setTimeInMillis(0);
 
         _setPowerOn(c.getTimeInMillis() / 1000, true);
-        Log.d("定时开机设置的时间：","" + c.getTimeInMillis() / 1000);
+        Log.d("定时开机设置的时间：", "" + c.getTimeInMillis() / 1000);
     }
 
     //时间-定时关机-每天
@@ -1088,7 +1100,7 @@ public class ZtlManager {
         }
 
         _setPowerOn(cal.getTimeInMillis() / 1000, false);
-        Log.d("一次性定时开机设置的时间：","" + cal.getTimeInMillis() / 1000);
+        Log.d("一次性定时开机设置的时间：", "" + cal.getTimeInMillis() / 1000);
     }
 
     //时间-定时关机-一次性
