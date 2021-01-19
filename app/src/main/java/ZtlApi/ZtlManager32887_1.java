@@ -152,43 +152,48 @@ public class ZtlManager32887_1 extends ZtlManager {
     Map<String, Integer> gpios = new HashMap<>();
 
     void init_gpiomap() {
-        gpios.put("GPIO7_A5", 221);
-        gpios.put("GPIO8_A1", 249);
-        gpios.put("GPIO8_A0", 248);
-        gpios.put("GPIO7_A6", 222);
-        gpios.put("GPIO8_A2", 250);
-        gpios.put("GPIO7_B3", 227);
-        gpios.put("GPIO7_B1", 225);
-        gpios.put("GPIO7_B2", 226);
-        gpios.put("GPIO7_C5", 237);
-        gpios.put("GPIO7_B4", 228);
-        gpios.put("GPIO8_B0", 256);
-        gpios.put("GPIO7_B5", 229);
-        gpios.put("GPIO0_C2", 18);
-        gpios.put("GPIO3_B0", 96);
-        gpios.put("GPIO3_B2", 98);
-        gpios.put("GPIO3_B3", 99);
-        gpios.put("GPIO7_A0", 216);
-        gpios.put("GPIO7_A2", 218);
-        gpios.put("GPIO3_B6", 102);
-        gpios.put("GPIO3_B7", 103);
-        gpios.put("GPIO3_C1", 105);
+        gpios.put("GPIO0_A0", 0);
+        gpios.put("GPIO0_A1", 1);
+        gpios.put("GPIO0_A2", 2);
+        gpios.put("GPIO0_A3", 3);
+        gpios.put("GPIO0_A4", 4);
+        gpios.put("GPIO0_A5", 5);
+        gpios.put("GPIO0_A6", 6);
         gpios.put("GPIO0_A7", 7);
-        gpios.put("GPIO5_B2", 162);
-        gpios.put("GPIO5_B3", 163);
-        gpios.put("GPIO5_B4", 164);
-        gpios.put("GPIO5_B5", 165);
-        gpios.put("GPIO5_C0", 168);
+
+        gpios.put("GPIO0_B0", 8);
+        gpios.put("GPIO0_B1", 9);
+        gpios.put("GPIO0_B2", 10);
+        gpios.put("GPIO0_B3", 11);
+        gpios.put("GPIO0_B4", 12);
+        gpios.put("GPIO0_B5", 13);
+        gpios.put("GPIO0_B6", 14);
+        gpios.put("GPIO0_B7", 15);
+
+        gpios.put("GPIO0_C0", 16);
+        gpios.put("GPIO0_C1", 17);
+        gpios.put("GPIO0_C2", 18);
+        gpios.put("GPIO0_C3", 19);
+        gpios.put("GPIO0_C4", 20);
+        gpios.put("GPIO0_C5", 21);
+        gpios.put("GPIO0_C6", 22);
+        gpios.put("GPIO0_C7", 23);
+
+        gpios.put("GPIO0_D0", 24);
     }
 
     @Override
     public int gpioStringToInt(String strGpioName) {
 
         //卢工说3288 7.1 计算方式为正常计算方式 5.1计算方式 -8
+        Object v = gpios.get(strGpioName);
+        if (v != null){
+            return super.gpioStringToInt(strGpioName);
+        }else
+            return super.gpioStringToInt(strGpioName) - 8;
 
-        return super.gpioStringToInt(strGpioName) - 8;
 
-//		Object v = gpios.get( strGpioName );
+
 //		if (v == null){
 //			Log.e("gpio","name"+strGpioName+"缺乏映射，请联系管理员添加");
 //			return -1;

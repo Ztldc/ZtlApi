@@ -73,6 +73,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得修改API版本号
+//20210119 3288-7.1的GPIO值，从0-24不需要计算，修复此问题
 //20210113 添加设置桌面接口、获取设置桌面包名接口
 //20201223 添加设置系统时间接口，参数传入long型,添加定时开机Log
 //20201215 添加获取剩余储存空间接口
