@@ -148,7 +148,6 @@ public class ZtlManager32887_1 extends ZtlManager {
         setSystemProperty("ztl.Screen", "Set");
     }
 
-
     Map<String, Integer> gpios = new HashMap<>();
 
     void init_gpiomap() {
