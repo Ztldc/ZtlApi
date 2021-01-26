@@ -20,6 +20,7 @@ import android.content.pm.ApplicationInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
+import android.os.Parcelable;
 import android.provider.Settings;
 
 import java.io.DataOutputStream;
@@ -65,6 +66,7 @@ import android.app.PendingIntent;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 
 import static java.util.Calendar.DAY_OF_MONTH;
 import static java.util.Calendar.HOUR_OF_DAY;
@@ -72,7 +74,8 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得修改API版本号
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：3.4
+//20210126 添加设置指定音量的音量值、获取指定音量的音量值、获取指定音量的最大音量值接口
 //20210125 添加设置系统铃声接口
 //20210119 3288-7.1的GPIO值，从0-24不需要计算，修复此问题
 //20210113 添加设置桌面接口、获取设置桌面包名接口
@@ -123,7 +126,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "3.3";
+        return "3.4";
     }
 
     protected Context mContext;
@@ -2201,8 +2204,10 @@ public class ZtlManager {
         return 0;
     }
 
-    //媒体-设置系统铃声音量
-    public void setSystemVolumeValue(int value){
+    //设置音量  第一个参数填入需要调整的音量
+    //如：2：铃声音量 3：音乐音量 4：提示声音音量
+    //第二个参数填入需要设置的音量 如：5
+    public void setVolume(int streamType, int value) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
@@ -2215,10 +2220,33 @@ public class ZtlManager {
         Intent intent = new Intent();
         intent.setComponent(componetName);
         intent.putExtra("cmd", "sys_sound");//value填的需要和ztlhelper统一
+        intent.putExtra("streamType", streamType);
         intent.putExtra("value", value);
 
         mContext.startService(intent);
+    }
 
+    //媒体-获取指定音量的音量值
+    public int getVolume(int streamType) {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return -1;
+        }
+
+        AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+        int currentVolume = am.getStreamVolume(streamType);
+        return currentVolume;
+    }
+
+    //媒体-获取指定音量的音量最大值
+    public int getMaxVolume(int streamType) {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return -1;
+        }
+        AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+        int maxVolume = am.getStreamMaxVolume(streamType);
+        return maxVolume;
     }
 
     //媒体-设置相机方向(摄像头)
@@ -2360,6 +2388,27 @@ public class ZtlManager {
         } catch (NoSuchMethodException e) {
             e.printStackTrace();
         }
+    }
+
+    //媒体-设置系统铃声音量
+    @Deprecated
+    public void setSystemVolumeValue(int value){
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "sys_sound");//value填的需要和ztlhelper统一
+        intent.putExtra("value", value);
+
+        mContext.startService(intent);
+
     }
 
     //时间-设置系统的时间是否需要自动获取
