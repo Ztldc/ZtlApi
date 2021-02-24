@@ -6,6 +6,10 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -74,7 +78,11 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：3.4
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：3.7
+//20210223 添加锁屏/设置锁屏密码接口
+//20210221 添加ZtlManagerU202 对应板子S905D3
+//20210203 添加判断系统是否支持看门狗功能、打开/关闭看门狗、看门狗喂狗、看门狗是否正在运行、读取看门狗的值接口
+//         添加ZtlManagerA40i
 //20210126 添加设置指定音量的音量值、获取指定音量的音量值、获取指定音量的最大音量值接口
 //20210125 添加设置系统铃声接口
 //20210119 3288-7.1的GPIO值，从0-24不需要计算，修复此问题
@@ -126,7 +134,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "3.4";
+        return "3.7";
     }
 
     protected Context mContext;
@@ -149,6 +157,7 @@ public class ZtlManager {
     static ZtlManager Instance;
     CpuInfo cpuInfo;
 
+    private static boolean isOpenWatchDog = false;
     private native static int setScreenResolution(String path);
 
     public static ZtlManager GetInstance() {
@@ -169,6 +178,10 @@ public class ZtlManager {
                 Instance = new ZtlManager3128();
             } else if (devType.contains("A64") || devType.contains("A33")) {
                 Instance = new ZtlManagerA33_A64();
+            } else if (devType.contains("A40")) {
+                Instance = new ZtlManagerA40i();
+            } else if (devType.contains("u202")) {
+                Instance = new ZtlManagerU202();
             }
             if (Instance == null) {
                 Instance = new ZtlManager();
@@ -200,6 +213,11 @@ public class ZtlManager {
     //系统-获取安卓版本号
     public static String getAndroidVersion() {
         return android.os.Build.VERSION.RELEASE;
+    }
+
+    //系统-获取固件版本号
+    public String getFirmwareVersion(){
+        return ZtlManager.GetInstance().getSystemProperty("ro.build.display.id", "");
     }
 
     //系统-获取SDK版本    返回22 23之类的
@@ -329,6 +347,23 @@ public class ZtlManager {
         return null;
     }
 
+    //系统-存储-返回插入的U盘个数
+    public int getUSBDiskCount() {
+
+        return -1;
+    }
+
+    //系统-存储-返回指定索引的U盘
+    public String getUSBDisk(int index) {
+
+        return null;
+    }
+
+    //系统-存储-返回U盘列表
+    public List<String> getUSBDisks() {
+        return null;
+    }
+
     //系统-存储-获取U盘路径	1
     public String getUsbStoragePath() {
         String usbPath = null;
@@ -336,7 +371,7 @@ public class ZtlManager {
 
         if (getAndroidVersion().contains("5.1")) {
             usbBasePath = "/mnt/usb_storage/";
-        } else if (getAndroidVersion().contains("7.1")) {
+        } else if (getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
             usbBasePath = "/storage/";
         }
 
@@ -596,12 +631,16 @@ public class ZtlManager {
 
     //系统-USB调试状态
     public boolean isUsbDebugOpen() {
-        String state = getSystemProperty("persist.sys.adbState", "1");
-        int instate = Integer.valueOf(state).intValue();
-        if (instate == 1) {
-            return true;
+        try{
+            String state = getSystemProperty("persist.sys.adbState", "1");
+            int instate = Integer.valueOf(state).intValue();
+            if (instate == 1) {
+                return true;
+            }
+            return false;
+        }catch (Exception e){
+            return false;
         }
-        return false;
     }
 
     //系统-设置OTG口连接状态
@@ -638,8 +677,221 @@ public class ZtlManager {
     public String getBuildSerial() {
         String sn = "";
         sn = getSystemProperty("persist.sys.ztlsn", "unknown");
-
         return sn;
+    }
+
+    /**
+     * echo 1 > /proc/ztl-wdog/wdog   打开看门狗
+     * echo 2 > /proc/ztl-wdog/wdog   喂狗
+     * echo 3 > /proc/ztl-wdog/wdog   关闭看门狗
+     */
+
+    //系统-判断是否支持看门狗功能 true:存在 false：不存在
+    public boolean hasWatchDog() {
+        if (isExist("/proc/ztl-wdog/wdog")) {
+            return true;
+        } else {
+            Log.e(TAG, "系统暂不支持看门狗，如需使用该功能，请联系技术支持");
+            return false;
+        }
+    }
+
+    //打开看门狗  true:打开成功  false：关闭成功
+    public boolean openWatchDog() {
+        boolean isOpen = false;
+        if (isOpenWatchDog) {
+            Log.e(TAG, "已经打开看门狗，请勿重复打开");
+            return true;
+        } else {
+            if (isExist("/proc/ztl-wdog/wdog")) {
+                Log.e(TAG, "正在使能看门狗");
+                execRootCmdSilent("echo 1 > /proc/ztl-wdog/wdog");
+                isOpen = true;
+                isOpenWatchDog = true;
+                Log.e(TAG, "已打开看门狗，进行喂狗");
+                feedWatchDog();
+            } else {
+                Log.e(TAG, "系统暂不支持看门狗，如需使用该功能，请联系技术支持");
+                return false;
+            }
+        }
+        return isOpen;
+    }
+
+    Thread watchDogThread = null;
+
+    //看门狗喂狗
+    private void feedWatchDog() {
+        if (isOpenWatchDog) {
+            if( watchDogThread == null){
+                watchDogThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        //开始喂狗
+                        while (true) {
+                            Log.e(TAG, "开始喂狗");
+                            execRootCmdSilent("echo 2 > /proc/ztl-wdog/wdog");
+                            try {
+                                Thread.sleep(20000);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                                break;
+                            }
+                        }
+                        Log.e(TAG, "喂狗线程已退出");
+                    }
+                });
+                watchDogThread.start();
+            }
+        }
+    }
+
+    //关闭看门狗 true:关闭成功  false：未关闭
+    public boolean closeWatchDog() {
+        if (watchDogThread != null) {
+            watchDogThread.interrupt();
+            watchDogThread = null;
+        }
+
+        //如果不喂狗，关闭看门狗
+        isOpenWatchDog = false;
+        execRootCmdSilent("echo 3 > /proc/ztl-wdog/wdog");
+        return isRunWatchDog();
+    }
+
+    //看门狗是否在运行
+    public boolean isRunWatchDog() {
+        boolean isRun = false;
+        if (ReadFile("/proc/ztl-wdog/wdog").contains("1")
+                || ReadFile("/proc/ztl-wdog/wdog").contains("2")) {
+            isRun = true;
+            return isRun;
+        } else if (ReadFile("/proc/ztl-wdog/wdog").contains("3")) {
+            isRun = false;
+            return isRun;
+        }
+        return isRun;
+    }
+
+    //系统-读取看门狗的值
+    public String watchDogValue() {
+        String watchdogState = ReadFile("/proc/ztl-wdog/wdog");
+        if (watchdogState != null) {
+            return watchdogState;
+        }
+        return watchdogState;
+    }
+
+    //系统-锁屏
+    public void lockScreenSettings(boolean bEnable, String password){
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "lock_screen_settings");//value填的需要和ztlhelper统一
+        intent.putExtra("bEnable", bEnable);
+        intent.putExtra("password", password);
+        mContext.startService(intent);
+
+    }
+
+    //系统-锁屏
+    public void lockScreen(){
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "lock_screen");//value填的需要和ztlhelper统一
+        mContext.startService(intent);
+    }
+
+    //读取节点的值
+    private static String ReadFile(String filePath) {
+        File file = new File(filePath);
+        if (file.isFile() && file.exists()) { //判断文件是否存在
+            StringBuffer sb = new StringBuffer();
+            byte[] tempbytes = new byte[1024];
+            int byteread = 0;
+            try {
+                InputStream in = new FileInputStream(file);
+                //ReadFromFile1.showAvailableBytes(in);
+                // 读入多个字节到字节数组中，byteread为一次读入的字节数
+                while ((byteread = in.read(tempbytes)) != -1) {
+                    //  System.out.write(tempbytes, 0, byteread);
+                    String str = new String(tempbytes, 0, byteread);
+                    sb.append(str);
+                }
+            } catch (java.io.FileNotFoundException e) {
+                //read file failed.
+                return null;
+            } catch (java.io.IOException dd) {
+                return null;
+            }
+
+            String jsonString = new String(sb);
+            return jsonString;
+        }
+
+        return null;
+    }
+
+    //来源 https://www.sharezer.com/archives/1314
+    public static String execRootCmd(String cmd) {
+        String result = "";
+        DataOutputStream dos = null;
+        DataInputStream dis = null;
+
+        try {
+            Process p = Runtime.getRuntime().exec(cmd);// 经过Root处理的android系统即有su命令
+            dos = new DataOutputStream(p.getOutputStream());
+            dis = new DataInputStream(p.getInputStream());
+
+            //dos.writeBytes(cmd + "\n");
+            dos.flush();
+            dos.writeBytes("exit\n");
+            dos.flush();
+            String line = null;
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(dis));
+            while ((line = br.readLine()) != null) {
+                result += line;
+                result += "\n";
+            }
+            p.waitFor();
+        } catch (Exception e) {
+
+            e.printStackTrace();
+        } finally {
+            if (dos != null) {
+                try {
+                    dos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (dis != null) {
+                try {
+                    dis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return result;
     }
 
     //系统-su执行命令行
@@ -1040,13 +1292,11 @@ public class ZtlManager {
     //存在一个问题，如果设置好定时开关机，再把系统时间往过去的时间调整，会导致执行不开关机。
     public void setSchedulePowerOn(int hour, int minute, boolean enableSchedulPowerOn) {
         long now = System.currentTimeMillis();
-        long now_totalSeconds = now / 1000;
 
         Calendar c = Calendar.getInstance();
         int year = c.get(Calendar.YEAR);
         int month = c.get(Calendar.MONTH);
         int day = c.get(Calendar.DAY_OF_MONTH);
-        long set_totalSeconds = 0;
         c.set(year, month, day, hour, minute, 0);
 
         if (enableSchedulPowerOn == false)
@@ -1426,15 +1676,23 @@ public class ZtlManager {
 
     //显示-获取屏幕方向	1
     public int getDisplayOrientation() {
-        String state = getSystemProperty("persist.ztl.hwrotation", "0");
-        return Integer.parseInt(state);
+        try {
+            String state = getSystemProperty("persist.ztl.hwrotation", "0");
+            return Integer.parseInt(state);
+        }catch (Exception e){
+            return 0;
+        }
     }
 
     //显示-获取触摸方向
     public int getTouchOrientation() {
-        String value = getSystemProperty(TP_ORIENTATION_PROP, "0");
-        int ret = Integer.valueOf(value).intValue();
-        return ret * 90;
+        try{
+            String value = getSystemProperty(TP_ORIENTATION_PROP, "0");
+            int ret = Integer.valueOf(value).intValue();
+            return ret * 90;
+        }catch (Exception e){
+            return 0;
+        }
     }
 
     //显示-设置触摸方向
@@ -1901,13 +2159,6 @@ public class ZtlManager {
         TelephonyManager telManager = (TelephonyManager) mContext
                 .getSystemService(Context.TELEPHONY_SERVICE);
         if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return "";
         }
 
@@ -1928,13 +2179,6 @@ public class ZtlManager {
         if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return "";
         }
         tel = telManager.getLine1Number();
@@ -1952,13 +2196,6 @@ public class ZtlManager {
         TelephonyManager telManager = (TelephonyManager) mContext
                 .getSystemService(Context.TELEPHONY_SERVICE);
         if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return "";
         }
         iccid = telManager.getSimSerialNumber();
@@ -1976,13 +2213,6 @@ public class ZtlManager {
         TelephonyManager telManager = (TelephonyManager) mContext
                 .getSystemService(Context.TELEPHONY_SERVICE);
         if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return "";
         }
         imsi = telManager.getSubscriberId();
@@ -2051,7 +2281,6 @@ public class ZtlManager {
     public boolean isExist(String path) {
         try {
             File file = new File(path);
-            //判断文件夹是否存在,如果不存在则创建文件夹
             return file.exists();
         } catch (Exception e) {
             // TODO: handle exception
@@ -2269,8 +2498,12 @@ public class ZtlManager {
 
     //媒体-获取相机方向
     public int getCameraOrientation() {
-        String state = getSystemProperty("persist.sys.cameraOrientation", "0");
-        return Integer.parseInt(state);
+        try{
+            String state = getSystemProperty("persist.sys.cameraOrientation", "0");
+            return Integer.parseInt(state);
+        }catch (Exception e){
+            return 0;
+        }
     }
 
     //媒体-获取相机是否镜像
@@ -2298,7 +2531,12 @@ public class ZtlManager {
                 return value;
             }
         } catch (Exception e) {
-            Log.d(TAG, "Unable to read system properties");
+//            e.printStackTrace();
+            String value = execRootCmd("getprop " + property);
+            if (value.isEmpty() == false){
+//                Log.d(TAG, "Unable to read system properties.return" + value);
+                return value;
+            }
         }
         return defaultValue;
     }
@@ -2392,7 +2630,7 @@ public class ZtlManager {
 
     //媒体-设置系统铃声音量
     @Deprecated
-    public void setSystemVolumeValue(int value){
+    public void setSystemVolumeValue(int value) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
@@ -2497,6 +2735,7 @@ public class ZtlManager {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
         }
+
         Intent systemBarIntent = new Intent("com.ding.systembar.chang");
         String str = "0";
         systemBarIntent.putExtra("enable", str);
@@ -2676,16 +2915,19 @@ public class ZtlManager {
             e.printStackTrace();
             return -1;
         }
-
         return 0;
     }
 
     //显示-获取触摸方向
     @Deprecated
     public int getTpOrientation() {
-        String value = getSystemProperty(TP_ORIENTATION_PROP, "0");
-        int ret = Integer.valueOf(value).intValue();
-        return ret;
+        try{
+            String value = getSystemProperty(TP_ORIENTATION_PROP, "0");
+            int ret = Integer.valueOf(value).intValue();
+            return ret;
+        }catch (Exception e){
+            return 0;
+        }
     }
 
     //显示-设置触摸方向
