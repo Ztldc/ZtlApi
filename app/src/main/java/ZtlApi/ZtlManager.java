@@ -3,6 +3,7 @@ package ZtlApi;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 
@@ -78,7 +79,8 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：3.7
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：3.8
+//20210227 去除获取sim卡信息强制权限、适配3128-4.4、添加获取4G故障状态码
 //20210223 添加锁屏/设置锁屏密码接口
 //20210221 添加ZtlManagerU202 对应板子S905D3
 //20210203 添加判断系统是否支持看门狗功能、打开/关闭看门狗、看门狗喂狗、看门狗是否正在运行、读取看门狗的值接口
@@ -134,7 +136,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "3.7";
+        return "3.8";
     }
 
     protected Context mContext;
@@ -175,7 +177,11 @@ public class ZtlManager {
             } else if (devType.contains("3368")) {
                 Instance = new ZtlManager3368();
             } else if (devType.contains("3126") || devType.contains("3128")) {
-                Instance = new ZtlManager3128();
+                if (getAndroidVersion().contains("7.1")){
+                    Instance = new ZtlManager3128();
+                } else if (getAndroidVersion().contains("4.4")){
+                    Instance = new ZtlManager31284_4();
+                }
             } else if (devType.contains("A64") || devType.contains("A33")) {
                 Instance = new ZtlManagerA33_A64();
             } else if (devType.contains("A40")) {
@@ -369,7 +375,7 @@ public class ZtlManager {
         String usbPath = null;
         String usbBasePath = "";
 
-        if (getAndroidVersion().contains("5.1")) {
+        if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
             usbBasePath = "/mnt/usb_storage/";
         } else if (getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
             usbBasePath = "/storage/";
@@ -678,6 +684,22 @@ public class ZtlManager {
         String sn = "";
         sn = getSystemProperty("persist.sys.ztlsn", "unknown");
         return sn;
+    }
+
+    //系统-判断4G网络故障代码
+    public static String get4gStatic(Context context) {
+
+        try {
+            ContentResolver contentProvider = context.getContentResolver();
+
+            return contentProvider.getType(
+                    Uri.parse("content://com.ztl.helper.ZtlApi/get4gStatic"));
+
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
+        return null;//要更新助手
+
     }
 
     /**
@@ -2158,9 +2180,9 @@ public class ZtlManager {
         String imei = null;
         TelephonyManager telManager = (TelephonyManager) mContext
                 .getSystemService(Context.TELEPHONY_SERVICE);
-        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            return "";
-        }
+//        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+//            return "";
+//        }
 
         imei = telManager.getDeviceId();
         return imei;
@@ -2176,11 +2198,11 @@ public class ZtlManager {
         String tel = null;
         TelephonyManager telManager = (TelephonyManager) mContext
                 .getSystemService(Context.TELEPHONY_SERVICE);
-        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            return "";
-        }
+//        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED
+//                && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED
+//                && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+//            return "";
+//        }
         tel = telManager.getLine1Number();
         return tel;
     }
@@ -2195,9 +2217,9 @@ public class ZtlManager {
         String iccid = null;
         TelephonyManager telManager = (TelephonyManager) mContext
                 .getSystemService(Context.TELEPHONY_SERVICE);
-        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            return "";
-        }
+//        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+//            return "";
+//        }
         iccid = telManager.getSimSerialNumber();
         return iccid;
     }
@@ -2212,9 +2234,9 @@ public class ZtlManager {
         String imsi = null;
         TelephonyManager telManager = (TelephonyManager) mContext
                 .getSystemService(Context.TELEPHONY_SERVICE);
-        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            return "";
-        }
+//        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+//            return "";
+//        }
         imsi = telManager.getSubscriberId();
         return imsi;
     }
@@ -2706,8 +2728,7 @@ public class ZtlManager {
         Intent intent = new Intent("reboot");
         mContext.sendBroadcast(intent);
 
-        String cmd = "reboot";
-        execRootCmdSilent(cmd);
+        execRootCmdSilent("reboot");
     }
 
     /*
