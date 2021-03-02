@@ -79,7 +79,8 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：3.8
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：3.9
+//20210302 修改execRootCmdSilent()接口，适配安卓9.0; 添加：设置打开wifi ap功能
 //20210227 去除获取sim卡信息强制权限、适配3128-4.4、添加获取4G故障状态码
 //20210223 添加锁屏/设置锁屏密码接口
 //20210221 添加ZtlManagerU202 对应板子S905D3
@@ -136,7 +137,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "3.8";
+        return "3.9";
     }
 
     protected Context mContext;
@@ -160,6 +161,7 @@ public class ZtlManager {
     CpuInfo cpuInfo;
 
     private static boolean isOpenWatchDog = false;
+
     private native static int setScreenResolution(String path);
 
     public static ZtlManager GetInstance() {
@@ -177,9 +179,9 @@ public class ZtlManager {
             } else if (devType.contains("3368")) {
                 Instance = new ZtlManager3368();
             } else if (devType.contains("3126") || devType.contains("3128")) {
-                if (getAndroidVersion().contains("7.1")){
+                if (getAndroidVersion().contains("7.1")) {
                     Instance = new ZtlManager3128();
-                } else if (getAndroidVersion().contains("4.4")){
+                } else if (getAndroidVersion().contains("4.4")) {
                     Instance = new ZtlManager31284_4();
                 }
             } else if (devType.contains("A64") || devType.contains("A33")) {
@@ -222,7 +224,7 @@ public class ZtlManager {
     }
 
     //系统-获取固件版本号
-    public String getFirmwareVersion(){
+    public String getFirmwareVersion() {
         return ZtlManager.GetInstance().getSystemProperty("ro.build.display.id", "");
     }
 
@@ -637,14 +639,14 @@ public class ZtlManager {
 
     //系统-USB调试状态
     public boolean isUsbDebugOpen() {
-        try{
+        try {
             String state = getSystemProperty("persist.sys.adbState", "1");
             int instate = Integer.valueOf(state).intValue();
             if (instate == 1) {
                 return true;
             }
             return false;
-        }catch (Exception e){
+        } catch (Exception e) {
             return false;
         }
     }
@@ -745,7 +747,7 @@ public class ZtlManager {
     //看门狗喂狗
     private void feedWatchDog() {
         if (isOpenWatchDog) {
-            if( watchDogThread == null){
+            if (watchDogThread == null) {
                 watchDogThread = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -805,7 +807,7 @@ public class ZtlManager {
     }
 
     //系统-锁屏
-    public void lockScreenSettings(boolean bEnable, String password){
+    public void lockScreenSettings(boolean bEnable, String password) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
@@ -825,7 +827,7 @@ public class ZtlManager {
     }
 
     //系统-锁屏
-    public void lockScreen(){
+    public void lockScreen() {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
@@ -922,13 +924,22 @@ public class ZtlManager {
         try {
             result = _execCmdAsSU("su", cmd);
         } catch (Exception e) {
-            String dwError = e.toString();
-            if (dwError.contains("Directory: null Environment: null") || dwError.contains("Permission")) {
-                Log.e(TAG, "无SU执行权限,正在尝试testsu");
+
+            Log.e(TAG, "su失败,正在尝试testsu");
+            try {
+                result = _execCmdAsSU("testsu", cmd);
+            } catch (Exception ex) {
+                Log.e(TAG, "testsu失败\r" + cmd + "\r执行失败");
+                e.printStackTrace();
+            }
+
+            /*String dwError = e.toString();
+            if (dwError.contains("Directory: null Environment: null") || dwError.contains("Permission")){
+                Log.e(TAG, "su失败,正在尝试testsu");
                 try {
                     result = _execCmdAsSU("testsu", cmd);
                 } catch (Exception ex) {
-                    Log.e(TAG, "此函数连接失败，请联系厂家解决");
+                    Log.e(TAG, "testsu失败\r" + cmd + "\r执行失败");
                     e.printStackTrace();
                 }
             } else {
@@ -936,7 +947,7 @@ public class ZtlManager {
                 e.printStackTrace();
                 Log.e(TAG, "无SU执行权限,请联系厂家解决");
                 return -1;
-            }
+            }*/
 
         }
         return result;
@@ -1701,18 +1712,18 @@ public class ZtlManager {
         try {
             String state = getSystemProperty("persist.ztl.hwrotation", "0");
             return Integer.parseInt(state);
-        }catch (Exception e){
+        } catch (Exception e) {
             return 0;
         }
     }
 
     //显示-获取触摸方向
     public int getTouchOrientation() {
-        try{
+        try {
             String value = getSystemProperty(TP_ORIENTATION_PROP, "0");
             int ret = Integer.valueOf(value).intValue();
             return ret * 90;
-        }catch (Exception e){
+        } catch (Exception e) {
             return 0;
         }
     }
@@ -2149,6 +2160,24 @@ public class ZtlManager {
         mContext.startService(intent);
     }
 
+    //设置打开wifi ap功能
+    public void setWifiApConfig(String SSID, String Password, int channel, int WifiMode, boolean enable) {
+        Intent mIntent = new Intent();
+        mIntent.setAction("com.ztl.wifisetting");
+        //热点名称
+        mIntent.putExtra("SSID", SSID);
+        //热点密码
+        mIntent.putExtra("Password", Password);
+        //频段可设置  149 153 157  161 165
+        mIntent.putExtra("Channel", channel);
+        //设置wifi 频段 0 2.4G  1  5G
+        mIntent.putExtra("WifiMode", WifiMode);
+        //false 关闭热点 true 打开热点
+        mIntent.putExtra("Enable", enable);
+
+        mContext.sendBroadcast(mIntent);
+    }
+
     //网络 启用/禁用4G自动重连
     public void enable4GReset(boolean bEnable) {
         if (mContext == null) {
@@ -2520,10 +2549,10 @@ public class ZtlManager {
 
     //媒体-获取相机方向
     public int getCameraOrientation() {
-        try{
+        try {
             String state = getSystemProperty("persist.sys.cameraOrientation", "0");
             return Integer.parseInt(state);
-        }catch (Exception e){
+        } catch (Exception e) {
             return 0;
         }
     }
@@ -2555,7 +2584,7 @@ public class ZtlManager {
         } catch (Exception e) {
 //            e.printStackTrace();
             String value = execRootCmd("getprop " + property);
-            if (value.isEmpty() == false){
+            if (value.isEmpty() == false) {
 //                Log.d(TAG, "Unable to read system properties.return" + value);
                 return value;
             }
@@ -2942,11 +2971,11 @@ public class ZtlManager {
     //显示-获取触摸方向
     @Deprecated
     public int getTpOrientation() {
-        try{
+        try {
             String value = getSystemProperty(TP_ORIENTATION_PROP, "0");
             int ret = Integer.valueOf(value).intValue();
             return ret;
-        }catch (Exception e){
+        } catch (Exception e) {
             return 0;
         }
     }
