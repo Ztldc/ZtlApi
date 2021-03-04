@@ -13,9 +13,7 @@ import android.util.Log;
 import android.os.SystemProperties;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 
@@ -28,11 +26,6 @@ public class ZtlManager3368 extends ZtlManager {
     //休眠
     @Override
     public void goToSleep() {
-        if (mContext == null) {
-            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
-            return;
-        }
-
         PowerManager powerManager = (PowerManager) this.mContext.getSystemService(Context.POWER_SERVICE);
         try {
             powerManager.getClass().getMethod("goToSleep", new Class[]{Long.TYPE}).
@@ -49,11 +42,6 @@ public class ZtlManager3368 extends ZtlManager {
     //唤醒
     @Override
     public void wakeUp() {
-        if (mContext == null) {
-            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
-            return;
-        }
-
         PowerManager powerManager = (PowerManager) this.mContext.getSystemService(Context.POWER_SERVICE);
         try {
             powerManager.getClass().getMethod("wakeUp", new Class[]{Long.TYPE})
@@ -67,22 +55,66 @@ public class ZtlManager3368 extends ZtlManager {
         }
     }
 
-    //获取屏幕方向
+    //获取外部U盘路径
+//    @Override
+//    public String getUsbStoragePath() {
+//        String usbPath = null;
+//        String usbBasePath = "/storage/";
+//
+//        File file = new File(usbBasePath);
+//        try {
+//            if ((file.exists()) && (file.isDirectory())) {
+//                File[] files = file.listFiles();
+//                for (int i = 0; i < files.length; i++) {
+//                    usbPath = files[i].getAbsolutePath();
+//                    LOGD("shx : get file path " + usbPath);
+//                    if (usbPath.contains("udisk")) {
+//                        LOGD("shx : open " + usbPath);
+//                        File usbFile = new File(usbPath);
+//                        if ((usbFile.exists()) && (usbFile.isDirectory())) {
+//                            usbPath = usbFile.getAbsolutePath();
+//                            LOGD("shx : usbPath " + usbPath);
+//                            break;
+//                        }
+//                    }
+//                }
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return usbPath;
+//    }
+
+    //todo 待测试
     @Override
-    public int getDisplayOrientation() {
-        String state = getSystemProperty("persist.sys.ztlOrientation", "0");
-        return Integer.valueOf(state).intValue();
+    public void setDisplayOrientation(int rotation) {
+        if (mContext == null) {
+            Log.e("上下文为空", "不执行");
+            return;
+        }
+        if (rotation == getDisplayOrientation()) {
+            Log.e("当前方向", "与旋转方向一致，不执行");
+            return;
+        }
+        try {
+            setSystemProperty("persist.ztl.hwrotation",rotation+"");
+			execRootCmdSilent("reboot");
+        } catch (Exception exc) {
+            Log.e(TAG, "set rotation err!");
+        }
     }
 
-    //系统-USB调试状态
-    @Override
-    public boolean isUsbDebugOpen() {
-        String state = getSystemProperty("persist.usb.mode", "1");
-        int instate = Integer.valueOf(state).intValue();
-        if (instate == 1) {
-            return true;
-        }
-        return false;
+//    //获取屏幕方向
+//    @Override
+//    public int getDisplayOrientation() {
+//        String state = getSystemProperty("persist.sys.ztlOrientation", "0");
+//        return Integer.valueOf(state).intValue();
+//    }
+
+    //获取当前GPIO的值
+    public int Getcurrentgpio(int port) {
+        execRootCmdSilent("cat /sys/class/gpio/gpio" + port + "value");
+        return 1;
     }
 
     //获取USB调试状态
@@ -94,6 +126,13 @@ public class ZtlManager3368 extends ZtlManager {
         } else {
             state = "0";
         }
+        return Integer.valueOf(state).intValue();
+    }
+
+    //获取状态栏信息
+    @Override
+    public int getSystemBarState() {
+        String state = getSystemProperty("persist.sys.barState", "1");
         return Integer.valueOf(state).intValue();
     }
 
@@ -119,11 +158,6 @@ public class ZtlManager3368 extends ZtlManager {
     //设置分辨率
     @Override
     public void setScreenMode(String mode) {
-        if (mContext == null) {
-            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
-            return;
-        }
-
         Intent setModeIntent = new Intent("android.ztl.action.SET_SCREEN_MODE");
         setModeIntent.putExtra("mode", mode);
         this.mContext.sendBroadcast(setModeIntent);

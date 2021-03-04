@@ -22,6 +22,7 @@ import java.util.Calendar;
 import java.util.Date;
 
 import android.content.pm.ApplicationInfo;
+import android.database.ContentObserver;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
@@ -79,7 +80,9 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：3.9
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.1
+//20210304 添加设置系统桌面壁纸接口
+//20210303 修改系统字体接口、添加ZtlManager3368接口
 //20210302 修改execRootCmdSilent()接口，适配安卓9.0; 添加：设置打开wifi ap功能
 //20210227 去除获取sim卡信息强制权限、适配3128-4.4、添加获取4G故障状态码
 //20210223 添加锁屏/设置锁屏密码接口
@@ -137,7 +140,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "3.9";
+        return "4.1";
     }
 
     protected Context mContext;
@@ -840,6 +843,24 @@ public class ZtlManager {
         Intent intent = new Intent();
         intent.setComponent(componetName);
         intent.putExtra("cmd", "lock_screen");//value填的需要和ztlhelper统一
+        mContext.startService(intent);
+    }
+
+    //系统-设置桌面壁纸
+    public void setWallpaper(String filePath){
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "Wallpaper");//value填的需要和ztlhelper统一
+        intent.putExtra("filepath", filePath);
         mContext.startService(intent);
     }
 
@@ -1882,8 +1903,28 @@ public class ZtlManager {
         }
     }
 
-    //显示-设置字体大小
+    //显示-设置字体大小 0:最小 1：正常 2：较大 3：最大
     public void setFontSize(int index) {
+        float[] values = new float[]{0.85f, 1.0f, 1.15f, 1.30f};
+        try{
+            setFontScale(values[index]);
+        }catch (Exception e){
+            e.printStackTrace();
+            return;
+        }
+    }
+    //显示-设置字体大小
+    private void setFontScale(float fontSize) {
+        try {
+            android.provider.Settings.System.putFloat(mContext.getContentResolver(), Settings.System.FONT_SCALE, fontSize);
+            Uri uri = android.provider.Settings.System.getUriFor(Settings.System.FONT_SCALE);
+            mContext.getContentResolver().notifyChange(uri, (ContentObserver) null);
+        } catch (Exception var3) {
+            var3.printStackTrace();
+        }
+    }
+    //显示-设置字体大小
+    /*public void setFontSize(int index) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
@@ -1895,7 +1936,7 @@ public class ZtlManager {
         Intent i = new Intent("com.action.ztl.fontsize");
         i.putExtra("fontsize", value);
         mContext.sendBroadcast(i);
-    }
+    }*/
 
     //网络-获取MAC地址 获取的是以太网口的。因为wifi不一定启用
     public String getMacAddress() {
@@ -2474,7 +2515,7 @@ public class ZtlManager {
             AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
             int maxVolume = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
             if (index >= 0 && index <= maxVolume)
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, index, AudioManager.FLAG_PLAY_SOUND);
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, index, AudioManager.FLAG_PLAY_SOUND | AudioManager.FLAG_SHOW_UI);
 
         } catch (Exception e) {
             e.printStackTrace();
