@@ -85,7 +85,6 @@ public class ZtlManager3368 extends ZtlManager {
 //        return usbPath;
 //    }
 
-    //todo 待测试
     @Override
     public void setDisplayOrientation(int rotation) {
         if (mContext == null) {

@@ -80,7 +80,7 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.1
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.2
 //20210304 添加设置系统桌面壁纸接口
 //20210303 修改系统字体接口、添加ZtlManager3368接口
 //20210302 修改execRootCmdSilent()接口，适配安卓9.0; 添加：设置打开wifi ap功能
@@ -140,7 +140,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "4.1";
+        return "4.2";
     }
 
     protected Context mContext;
@@ -171,6 +171,7 @@ public class ZtlManager {
         if (Instance == null) {
             //根据设备类型和系统版本生成不同的对象
             String devType = getDeviceVersion();
+            Log.e("设备型号", "===================" + devType);
             if (devType.contains("3288") && getAndroidVersion().contains("5.1")) {
                 Instance = new ZtlManager();
             } else if (devType.contains("3399")) {
@@ -843,24 +844,6 @@ public class ZtlManager {
         Intent intent = new Intent();
         intent.setComponent(componetName);
         intent.putExtra("cmd", "lock_screen");//value填的需要和ztlhelper统一
-        mContext.startService(intent);
-    }
-
-    //系统-设置桌面壁纸
-    public void setWallpaper(String filePath){
-        if (mContext == null) {
-            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
-            return;
-        }
-
-        ComponentName componetName = new ComponentName(
-                "com.ztl.helper",  //这个参数是另外一个app的包名
-                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
-
-        Intent intent = new Intent();
-        intent.setComponent(componetName);
-        intent.putExtra("cmd", "Wallpaper");//value填的需要和ztlhelper统一
-        intent.putExtra("filepath", filePath);
         mContext.startService(intent);
     }
 
@@ -1923,6 +1906,25 @@ public class ZtlManager {
             var3.printStackTrace();
         }
     }
+
+    //显示-设置桌面壁纸
+    public void setWallpaper(String filePath){
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "Wallpaper");//value填的需要和ztlhelper统一
+        intent.putExtra("filepath", filePath);
+        mContext.startService(intent);
+    }
+
     //显示-设置字体大小
     /*public void setFontSize(int index) {
         if (mContext == null) {
