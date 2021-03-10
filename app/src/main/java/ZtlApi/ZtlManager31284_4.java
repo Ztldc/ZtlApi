@@ -341,21 +341,24 @@ public class ZtlManager31284_4 extends ZtlManager {
         }
         return "1920x1080";
     }
+
     //获取屏幕分辨率列表
     @Override
     public String[] getScreenModes() {
+        // 1920x1080 1280x720
 
-
-        return null;
+        return new String[]{"1920x1080", "1280x720"};
     }
 
-    //设置分辨率		1 没做
+    //设置分辨率  1 没做
     @Override
     public void setScreenMode(String mode) {
-
-        //    Intent setModeIntent = new Intent("android.ztl.action.SET_SCREEN_MODE");
-        //    setModeIntent.putExtra("mode", mode);
-        //   mContext.sendBroadcast(setModeIntent);
+        if (mode.contains("1920x1080")){
+            execRootCmdSilent("/system/xbin/resolution 1080 1920 60");// 1920x1080
+            reboot(0);
+        } else if (mode.contains("1280x720")){
+            execRootCmdSilent("/system/xbin/resolution 720  1280 60");// 1280x720
+            reboot(0);
+        }
     }
-
 }

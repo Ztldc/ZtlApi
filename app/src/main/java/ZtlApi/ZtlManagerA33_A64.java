@@ -279,7 +279,7 @@ public class ZtlManagerA33_A64 extends ZtlManager {
     @Override
     public void setGpioDirection(String port, String direction) {
         if (port.contains("PE") == false) {
-            Log.e(TAG, "传入参数错误,请传入GPIO7_A5之类的，实际以规格书为准");
+            Log.e(TAG, "传入参数错误,请传入PE1之类的，实际以规格书为准");
             return;
         }
         Gpio gpio = new Gpio();
@@ -293,7 +293,7 @@ public class ZtlManagerA33_A64 extends ZtlManager {
     @Override
     public String getGpioDirection(String port) {
         if (port.contains("PE") == false) {
-            Log.e(TAG, "传入参数错误,请传入GPIO7_A5之类的，实际以规格书为准");
+            Log.e(TAG, "传入参数错误,请传入PE1之类的，实际以规格书为准");
             return null;
         }
         Gpio gpio = new Gpio();

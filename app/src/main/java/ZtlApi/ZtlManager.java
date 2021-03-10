@@ -9,6 +9,7 @@ import android.content.Intent;
 
 import java.io.DataInputStream;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Inet4Address;
@@ -80,11 +81,12 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.2
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.3
+//20210310 添加设置GPIO方式
 //20210304 添加设置系统桌面壁纸接口
 //20210303 修改系统字体接口、添加ZtlManager3368接口
 //20210302 修改execRootCmdSilent()接口，适配安卓9.0; 添加：设置打开wifi ap功能
-//20210227 去除获取sim卡信息强制权限、适配3128-4.4、添加获取4G故障状态码
+//20210227 去除获取sim卡信息强制权限、适配3128-4.4;添加获取4G故障状态码
 //20210223 添加锁屏/设置锁屏密码接口
 //20210221 添加ZtlManagerU202 对应板子S905D3
 //20210203 添加判断系统是否支持看门狗功能、打开/关闭看门狗、看门狗喂狗、看门狗是否正在运行、读取看门狗的值接口
@@ -140,10 +142,11 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "4.2";
+        return "4.3";
     }
 
     protected Context mContext;
+    private static String devType;
     boolean DEBUG_ZTL = false;
     static String TAG = "ZtlManager";
     String BlFile = "/proc/bl_root/bl_entry";
@@ -170,8 +173,7 @@ public class ZtlManager {
     public static ZtlManager GetInstance() {
         if (Instance == null) {
             //根据设备类型和系统版本生成不同的对象
-            String devType = getDeviceVersion();
-            Log.e("设备型号", "===================" + devType);
+            devType = getDeviceVersion();
             if (devType.contains("3288") && getAndroidVersion().contains("5.1")) {
                 Instance = new ZtlManager();
             } else if (devType.contains("3399")) {
@@ -877,49 +879,53 @@ public class ZtlManager {
         return null;
     }
 
-    //来源 https://www.sharezer.com/archives/1314
-    public static String execRootCmd(String cmd) {
+    private static String tryExec(String su, String cmd) throws IOException, InterruptedException {
         String result = "";
         DataOutputStream dos = null;
         DataInputStream dis = null;
+        Process p = Runtime.getRuntime().exec(su);// 经过Root处理的android系统即有su命令
+        dos = new DataOutputStream(p.getOutputStream());
+        dis = new DataInputStream(p.getInputStream());
 
+        dos.writeBytes(cmd + "\n");
+        dos.flush();
         try {
-            Process p = Runtime.getRuntime().exec(cmd);// 经过Root处理的android系统即有su命令
-            dos = new DataOutputStream(p.getOutputStream());
-            dis = new DataInputStream(p.getInputStream());
-
-            //dos.writeBytes(cmd + "\n");
-            dos.flush();
+            Thread.sleep(100);
             dos.writeBytes("exit\n");
             dos.flush();
-            String line = null;
-
-            BufferedReader br = new BufferedReader(new InputStreamReader(dis));
-            while ((line = br.readLine()) != null) {
-                result += line;
-                result += "\n";
-            }
-            p.waitFor();
         } catch (Exception e) {
+            //e.printStackTrace();
+        }
 
-            e.printStackTrace();
-        } finally {
-            if (dos != null) {
-                try {
-                    dos.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (dis != null) {
-                try {
-                    dis.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+        String line = null;
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(dis));
+        while ((line = br.readLine()) != null) {
+            result += line;
+            result += "\n";
+        }
+        p.waitFor();
+        dos.close();
+
+        return result;
+    }
+
+    //来源https://www.sharezer.com/archives/1314
+    //获取cmd返回值 执行需要很久时间的命令时，会有可能失败
+    public static String execRootCmd(String cmd) {
+        String ret = "";
+        try {
+            ret = tryExec("su", cmd);
+        } catch (IOException | InterruptedException io) {
+            Log.e("exec su failed", "exec su failed.trying testsu:" + cmd);
+            try {
+                ret = tryExec("testsu", cmd);
+            } catch (IOException | InterruptedException io1) {
+                Log.e("exec testsu failed", cmd + " exec failed.");
+                return "";
             }
         }
-        return result;
+        return ret;
     }
 
     //系统-su执行命令行
@@ -958,14 +964,29 @@ public class ZtlManager {
     }
 
     int _execCmdAsSU(String strSU, String cmd) throws Exception {
+        //setSystemProperty("ztl.result", "0");
+
         Process p;
         p = Runtime.getRuntime().exec(strSU);
         DataOutputStream dos = new DataOutputStream(p.getOutputStream());
 
         dos.writeBytes(cmd + "\n");
         dos.flush();
-        dos.writeBytes("exit\n");
-        dos.flush();
+        try {
+            Thread.sleep(10);
+            dos.writeBytes("exit\n");
+            dos.flush();
+        } catch (Exception e) {
+
+        }
+
+//        String value = getSystemProperty("ztl.result", "-1");
+//        Log.e("_execCmdAsSU", "value ==============" + value);
+//        if (value.equals("-1") || value.equals("0")){
+//            Log.e("_execCmdAsSU", "value " + value);
+//            throw new FileNotFoundException();
+//        }
+
         int result = p.waitFor();
         dos.close();
 
@@ -1721,6 +1742,18 @@ public class ZtlManager {
         }
     }
 
+    //设置USB触摸 -2:不支持usb触摸屏开关; -1:失败, 原因不明 ;1:设置成功; null:需要更新助手
+    public static String setUsbTouchEnable(Context context, boolean bEnable, boolean bAllways) {
+        try {
+            ContentResolver contentProvider = context.getContentResolver();
+            return contentProvider.getType(
+                    Uri.parse("content://com.ztl.helper.ZtlApi/UsbTouch_" + bEnable + "_" + bAllways));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;//要更新助手
+    }
+
     //显示-获取触摸方向
     public int getTouchOrientation() {
         try {
@@ -1889,13 +1922,14 @@ public class ZtlManager {
     //显示-设置字体大小 0:最小 1：正常 2：较大 3：最大
     public void setFontSize(int index) {
         float[] values = new float[]{0.85f, 1.0f, 1.15f, 1.30f};
-        try{
+        try {
             setFontScale(values[index]);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return;
         }
     }
+
     //显示-设置字体大小
     private void setFontScale(float fontSize) {
         try {
@@ -1908,7 +1942,7 @@ public class ZtlManager {
     }
 
     //显示-设置桌面壁纸
-    public void setWallpaper(String filePath){
+    public void setWallpaper(String filePath) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
@@ -2409,6 +2443,120 @@ public class ZtlManager {
         int C = port.charAt(7);
         int value = ((A - '0') & 0xff) * 32 + (B - 'A') * 8 + C - '0';
         return value;
+    }
+
+    //设置GPIO值-第一个参数传入需要设置的IO口，具体参考规格书，第二个参数设置IO口的值。该接口默认为输出状态
+    public void setGpioValue(int type, int value) {
+        Gpio gpio = new Gpio();
+        if (devType.toLowerCase().contains("rk3288")){
+            devType = "rk3288";
+        }else  if (devType.toLowerCase().contains("rk3126")){
+            devType = "rk3126";
+        }else  if (devType.toLowerCase().contains("a64")){
+            devType = "A64";
+        }else  if (devType.toLowerCase().contains("rk3368")){
+            devType = "rk3368";
+        }else  if (devType.toLowerCase().contains("rk3399")){
+            devType = "rk3399";
+        }else {
+            Log.e(TAG, "该系统暂不支持该接口");
+            return;
+        }
+        if (type < 0) {
+            Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
+            return;
+        }
+        String[] gpioNames = GpioName.GpioNameMap.get(devType);
+
+        if (gpio.open(gpioNames[type]) == false) {
+            return;
+        }
+        gpio.setValue("out", value);
+    }
+
+    //获取GPIO值-第一个参数传入需要获取的IO口，第二个参数传入方向，返回值为当前GPIO的值
+    public int getGpioValue(int type, String direction) {
+        Gpio gpio = new Gpio();
+        if (devType.toLowerCase().contains("rk3288")){
+            devType = "rk3288";
+        }else  if (devType.toLowerCase().contains("rk3126")){
+            devType = "rk3126";
+        }else  if (devType.toLowerCase().contains("a64")){
+            devType = "A64";
+        }else  if (devType.toLowerCase().contains("rk3368")){
+            devType = "rk3368";
+        }else  if (devType.toLowerCase().contains("rk3399")){
+            devType = "rk3399";
+        }else {
+            Log.e(TAG, "该系统暂不支持该接口");
+            return -1;
+        }
+        if (type < 0) {
+            Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
+            return -1;
+        }
+        String[] gpioNames = GpioName.GpioNameMap.get(devType);
+        if (gpio.open(gpioNames[type]) == false) {
+            return -1;
+        }
+        gpio.setDirection(direction);
+        return gpio.getValue();
+    }
+
+    //设置GPIO方向-第一个参数传入需要设置的IO口，第二个参数传入需要设置的方向
+    public void setGpioDirection(int type, String direction) {
+        if (devType.toLowerCase().contains("rk3288")){
+            devType = "rk3288";
+        }else  if (devType.toLowerCase().contains("rk3126")){
+            devType = "rk3126";
+        }else  if (devType.toLowerCase().contains("a64")){
+            devType = "A64";
+        }else  if (devType.toLowerCase().contains("rk3368")){
+            devType = "rk3368";
+        }else  if (devType.toLowerCase().contains("rk3399")){
+            devType = "rk3399";
+        }else {
+            Log.e(TAG, "该系统暂不支持该接口");
+            return;
+        }
+        if (type < 0) {
+            Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
+            return;
+        }
+        Gpio gpio = new Gpio();
+        String[] gpioNames = GpioName.GpioNameMap.get(devType);
+        if (gpio.open(gpioNames[type]) == false) {
+            return;
+        }
+        gpio.setDirection(direction);
+    }
+
+    //获取GPIO方向-参数传入需要获取的IO口，返回值为获取到的方向
+    public String getGpioDirection(int type) {
+        if (devType.toLowerCase().contains("rk3288")){
+            devType = "rk3288";
+        }else  if (devType.toLowerCase().contains("rk3126")){
+            devType = "rk3126";
+        }else  if (devType.toLowerCase().contains("a64")){
+            devType = "A64";
+        }else  if (devType.toLowerCase().contains("rk3368")){
+            devType = "rk3368";
+        }else  if (devType.toLowerCase().contains("rk3399")){
+            devType = "rk3399";
+        }else {
+            Log.e(TAG, "该系统暂不支持该接口");
+            return null;
+        }
+        if (type < 0) {
+            Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
+            return null;
+        }
+        Gpio gpio = new Gpio();
+        String[] gpioNames = GpioName.GpioNameMap.get(devType);
+        if (gpio.open(gpioNames[type]) == false) {
+            return null;
+        }
+        return gpio.getDirection();
     }
 
     //设置GPIO值-GPIO只有设置输出的值才有意义。所以这里默认就是设置输出

@@ -18,7 +18,7 @@ public class Gpio {
     private static final String TAG = "GPIO";
     private int mPort;
     private boolean isGpioPortPrepared = false;
-    
+
     private File mGpioExport = null;
     private File mGpioUnExport = null;
     private File mGpioPort = null;
