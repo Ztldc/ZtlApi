@@ -82,7 +82,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.3
-//20210310 添加设置GPIO方式
+//20210311 添加设置GPIO方式
 //20210304 添加设置系统桌面壁纸接口
 //20210303 修改系统字体接口、添加ZtlManager3368接口
 //20210302 修改execRootCmdSilent()接口，适配安卓9.0; 添加：设置打开wifi ap功能
@@ -2445,118 +2445,91 @@ public class ZtlManager {
         return value;
     }
 
-    //设置GPIO值-第一个参数传入需要设置的IO口，具体参考规格书，第二个参数设置IO口的值。该接口默认为输出状态
-    public void setGpioValue(int type, int value) {
-        Gpio gpio = new Gpio();
-        if (devType.toLowerCase().contains("rk3288")){
+    //设置GPIO值
+    /*
+     * 返回值：-1：IO口输入错误或IO口打开失败
+     * 返回值：-2：系统不支持该接口
+     * 返回值：1：打开成功并设置成功
+     * 参数说明：type：IO口，参考规格书；bIn：true：输入；false：输出；bHigh：true：置高；false：置底
+     * */
+    public int setGpioValue(int type, boolean bIn, boolean bHigh) {
+        if (devType.contains("3288")) {
             devType = "rk3288";
-        }else  if (devType.toLowerCase().contains("rk3126")){
+        } else if (devType.contains("3126")) {
             devType = "rk3126";
-        }else  if (devType.toLowerCase().contains("a64")){
+        } else if (devType.contains("a64")) {
             devType = "A64";
-        }else  if (devType.toLowerCase().contains("rk3368")){
+        } else if (devType.contains("3368")) {
             devType = "rk3368";
-        }else  if (devType.toLowerCase().contains("rk3399")){
+        } else if (devType.contains("3399")) {
             devType = "rk3399";
-        }else {
-            Log.e(TAG, "该系统暂不支持该接口");
-            return;
-        }
-        if (type < 0) {
-            Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
-            return;
-        }
-        String[] gpioNames = GpioName.GpioNameMap.get(devType);
-
-        if (gpio.open(gpioNames[type]) == false) {
-            return;
-        }
-        gpio.setValue("out", value);
-    }
-
-    //获取GPIO值-第一个参数传入需要获取的IO口，第二个参数传入方向，返回值为当前GPIO的值
-    public int getGpioValue(int type, String direction) {
-        Gpio gpio = new Gpio();
-        if (devType.toLowerCase().contains("rk3288")){
-            devType = "rk3288";
-        }else  if (devType.toLowerCase().contains("rk3126")){
-            devType = "rk3126";
-        }else  if (devType.toLowerCase().contains("a64")){
-            devType = "A64";
-        }else  if (devType.toLowerCase().contains("rk3368")){
-            devType = "rk3368";
-        }else  if (devType.toLowerCase().contains("rk3399")){
-            devType = "rk3399";
-        }else {
+        } else {
             Log.e(TAG, "该系统暂不支持该接口");
             return -1;
         }
         if (type < 0) {
             Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
-            return -1;
+            return -2;
         }
-        String[] gpioNames = GpioName.GpioNameMap.get(devType);
-        if (gpio.open(gpioNames[type]) == false) {
-            return -1;
+        String[] gpioName = GpioName.GpioNameMap.get(devType);
+        Gpio gpio = new Gpio();
+        if (gpio.open(gpioName[type]) == false) {
+            return -3;
+        } else {
+            String dir = bIn ? "in" : "out";
+            int value = bHigh ? 1 : 0;
+            gpio.setValue(dir, value);
+            return 1;
         }
-        gpio.setDirection(direction);
-        return gpio.getValue();
     }
 
-    //设置GPIO方向-第一个参数传入需要设置的IO口，第二个参数传入需要设置的方向
-    public void setGpioDirection(int type, String direction) {
-        if (devType.toLowerCase().contains("rk3288")){
+    //获取GPIO输出值
+    /*
+     * 返回值：-1：IO口输入错误或IO口打开失败
+     * 返回值：-2：系统不支持该接口
+     * 返回值：1：输入(in)的置高；2：输入(in)的置底；3：输出(out)的置高；4：输出(out)的置底
+     * */
+    public int getGpioValue(int type) {
+        if (devType.contains("3288")) {
             devType = "rk3288";
-        }else  if (devType.toLowerCase().contains("rk3126")){
+        } else if (devType.contains("3126")) {
             devType = "rk3126";
-        }else  if (devType.toLowerCase().contains("a64")){
+        } else if (devType.contains("a64")) {
             devType = "A64";
-        }else  if (devType.toLowerCase().contains("rk3368")){
+        } else if (devType.contains("3368")) {
             devType = "rk3368";
-        }else  if (devType.toLowerCase().contains("rk3399")){
+        } else if (devType.contains("3399")) {
             devType = "rk3399";
-        }else {
+        } else {
             Log.e(TAG, "该系统暂不支持该接口");
-            return;
+            return -1;
         }
-        if (type < 0) {
-            Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
-            return;
-        }
-        Gpio gpio = new Gpio();
-        String[] gpioNames = GpioName.GpioNameMap.get(devType);
-        if (gpio.open(gpioNames[type]) == false) {
-            return;
-        }
-        gpio.setDirection(direction);
-    }
 
-    //获取GPIO方向-参数传入需要获取的IO口，返回值为获取到的方向
-    public String getGpioDirection(int type) {
-        if (devType.toLowerCase().contains("rk3288")){
-            devType = "rk3288";
-        }else  if (devType.toLowerCase().contains("rk3126")){
-            devType = "rk3126";
-        }else  if (devType.toLowerCase().contains("a64")){
-            devType = "A64";
-        }else  if (devType.toLowerCase().contains("rk3368")){
-            devType = "rk3368";
-        }else  if (devType.toLowerCase().contains("rk3399")){
-            devType = "rk3399";
-        }else {
-            Log.e(TAG, "该系统暂不支持该接口");
-            return null;
-        }
         if (type < 0) {
             Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
-            return null;
+            return -2;
         }
+
+        String[] gpioName = GpioName.GpioNameMap.get(devType);
         Gpio gpio = new Gpio();
-        String[] gpioNames = GpioName.GpioNameMap.get(devType);
-        if (gpio.open(gpioNames[type]) == false) {
-            return null;
+        if (gpio.open(gpioName[type]) == false) {
+            return -3;
         }
-        return gpio.getDirection();
+
+        if (gpio.getDirection().contains("in")) {
+            if (gpio.getValue() == 1) {
+                return 1;
+            } else if (gpio.getValue() == 0) {
+                return 2;
+            }
+        } else if (gpio.getDirection().contains("out")) {
+            if (gpio.getValue() == 1) {
+                return 3;
+            } else if (gpio.getValue() == 0) {
+                return 4;
+            }
+        }
+        return -1;
     }
 
     //设置GPIO值-GPIO只有设置输出的值才有意义。所以这里默认就是设置输出
