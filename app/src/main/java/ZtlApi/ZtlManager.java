@@ -28,6 +28,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Parcelable;
+import android.os.storage.StorageVolume;
 import android.provider.Settings;
 
 import java.io.DataOutputStream;
@@ -81,7 +82,8 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.3
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.4
+//20210322 添加获取插入U盘个数，返回指定索引U盘路径接口
 //20210311 添加设置GPIO方式
 //20210304 添加设置系统桌面壁纸接口
 //20210303 修改系统字体接口、添加ZtlManager3368接口
@@ -142,7 +144,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "4.3";
+        return "4.4";
     }
 
     protected Context mContext;
@@ -169,6 +171,8 @@ public class ZtlManager {
     private static boolean isOpenWatchDog = false;
 
     private native static int setScreenResolution(String path);
+
+    public native static boolean ztl_check();
 
     public static ZtlManager GetInstance() {
         if (Instance == null) {
@@ -231,7 +235,7 @@ public class ZtlManager {
 
     //系统-获取固件版本号
     public String getFirmwareVersion() {
-        return ZtlManager.GetInstance().getSystemProperty("ro.build.display.id", "");
+        return getSystemProperty("ro.build.display.id", "");
     }
 
     //系统-获取SDK版本    返回22 23之类的
@@ -346,13 +350,20 @@ public class ZtlManager {
             Method getVolumeList = mStorageManager.getClass().getMethod("getVolumeList");
             Method getPath = storageVolumeClazz.getMethod("getPath");
             Method isRemovable = storageVolumeClazz.getMethod("isRemovable");
+            Method getDescription = storageVolumeClazz.getMethod("getDescription", Context.class);
             Object result = getVolumeList.invoke(mStorageManager);
             final int length = Array.getLength(result);
             for (int i = 0; i < length; i++) {
                 Object storageVolumeElement = Array.get(result, i);
                 String path = (String) getPath.invoke(storageVolumeElement);
-                if ((Boolean) isRemovable.invoke(storageVolumeElement)) {
-                    return path;
+                String description = (String) getDescription.invoke(storageVolumeElement, mContext);
+                boolean removable = (Boolean) isRemovable.invoke(storageVolumeElement);
+                if (true == removable) {// 可拆卸设备
+                    if(description.endsWith("SD")||description.endsWith("SD 卡")){//sd卡可判断
+                        return path;
+                    }else{//其它sd卡不可通过SD、SD卡来判断识别
+                        return path;
+                    }
                 }
             }
         } catch (Exception e) {
@@ -363,14 +374,79 @@ public class ZtlManager {
 
     //系统-存储-返回插入的U盘个数
     public int getUSBDiskCount() {
+        String usbPath = null;
+        String usbBasePath = "";
+        if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
+            usbBasePath = "/mnt/usb_storage/";
+        } else if (getAndroidVersion().contains("6") || getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
+            usbBasePath = "/storage/";
+        }
+        File file = new File(usbBasePath);
+        try{
+            if (file.exists() && file.isDirectory()){
+                File[] files = file.listFiles();
+                if (files.length > 0){
+                    usbPath = files[0].getAbsolutePath();
+                    if (usbPath.contains("USB_DISK")) { //open USB_DISK
+                        File usbFile = new File(usbPath); //steve 5.1OS maybe /usbPath + /udisk0
+                        if (usbFile.exists() && usbFile.isDirectory()) {
+                            File[] usbFiles = usbFile.listFiles();
+                            return usbFiles.length;
+                        }
+                    }
+                }
 
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         return -1;
     }
 
-    //系统-存储-返回指定索引的U盘
+    //系统-存储-返回指定索引的U盘   U盘不存在时返回null，输入的索引错误时返回null
     public String getUSBDisk(int index) {
+        String usbPath = null;
+        String usbBasePath = "";
 
-        return null;
+        if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
+            usbBasePath = "/mnt/usb_storage/";
+        } else if (getAndroidVersion().contains("6") || getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
+            usbBasePath = "/storage/";
+        }
+
+        File file = new File(usbBasePath);
+        try {
+            if (file.exists() && file.isDirectory()) { //open usb_storage
+                File[] files = file.listFiles();
+                if (files.length > 0) {
+                    List<String> Files1 = new ArrayList<>();
+                    for (int i = 0; i < files.length; i++) {
+                        String absPath = files[i].getAbsolutePath();
+                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")) {
+                            continue;
+                        } else {
+                            Files1.add(absPath);
+                        }
+                    }
+                    if (Files1.size() == 0) {
+                        return null;
+                    }
+                    usbPath = files[index].getAbsolutePath();
+                    if (usbPath.contains("USB_DISK")) { //open USB_DISK
+                        File usbFile = new File(usbPath); //steve 5.1OS maybe /usbPath + /udisk0
+                        if (usbFile.exists() && usbFile.isDirectory()) {
+                            File[] usbFiles = usbFile.listFiles();
+                            if (usbFiles.length != 0) {
+                                usbPath = usbFiles[index].getAbsolutePath();    //udisk0
+                            }
+                        }
+                    }//end open USB_DISK
+                }
+            }//end open usb_storage
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return usbPath;
     }
 
     //系统-存储-返回U盘列表
@@ -385,7 +461,7 @@ public class ZtlManager {
 
         if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
             usbBasePath = "/mnt/usb_storage/";
-        } else if (getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
+        } else if (getAndroidVersion().contains("6") || getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
             usbBasePath = "/storage/";
         }
 
@@ -935,7 +1011,7 @@ public class ZtlManager {
             result = _execCmdAsSU("su", cmd);
         } catch (Exception e) {
 
-            Log.e(TAG, "su失败,正在尝试testsu");
+            Log.e(TAG, "su失败,正在尝试testsu " + cmd);
             try {
                 result = _execCmdAsSU("testsu", cmd);
             } catch (Exception ex) {
@@ -2450,7 +2526,7 @@ public class ZtlManager {
      * 返回值：-1：IO口输入错误或IO口打开失败
      * 返回值：-2：系统不支持该接口
      * 返回值：1：打开成功并设置成功
-     * 参数说明：type：IO口，参考规格书；bIn：true：输入；false：输出；bHigh：true：置高；false：置底
+     * 参数说明：type：IO口，参考规格书；bIn：true：输入；false：输出；bHigh：true：置高；false：置低
      * */
     public int setGpioValue(int type, boolean bIn, boolean bHigh) {
         if (devType.contains("3288")) {
@@ -2487,7 +2563,7 @@ public class ZtlManager {
     /*
      * 返回值：-1：IO口输入错误或IO口打开失败
      * 返回值：-2：系统不支持该接口
-     * 返回值：1：输入(in)的置高；2：输入(in)的置底；3：输出(out)的置高；4：输出(out)的置底
+     * 返回值：1：输入(in)的置高；2：输入(in)的置低；3：输出(out)的置高；4：输出(out)的置低
      * */
     public int getGpioValue(int type) {
         if (devType.contains("3288")) {
