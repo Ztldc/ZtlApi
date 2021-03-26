@@ -83,7 +83,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.4
-//20210322 添加获取插入U盘个数，返回指定索引U盘路径接口 
+//20210322 添加获取插入U盘个数，返回指定索引U盘路径接口
 //20210311 添加设置GPIO方式
 //20210304 添加设置系统桌面壁纸接口
 //20210303 修改系统字体接口、添加ZtlManager3368接口
