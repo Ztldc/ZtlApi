@@ -11,6 +11,10 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ZtlManagerU202 extends ZtlManager {
 
@@ -26,7 +30,7 @@ public class ZtlManagerU202 extends ZtlManager {
     public long getTotalInternalMemorySize() {
         StorageStatsManager storageStatsManager = null;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            storageStatsManager = (StorageStatsManager)mContext.getSystemService(Context.STORAGE_STATS_SERVICE);
+            storageStatsManager = (StorageStatsManager) mContext.getSystemService(Context.STORAGE_STATS_SERVICE);
             try {
                 long totalBytes = storageStatsManager.getTotalBytes(StorageManager.UUID_DEFAULT);//总空间大小
                 long availBytes = storageStatsManager.getFreeBytes(StorageManager.UUID_DEFAULT);//可用空间大小
@@ -39,12 +43,105 @@ public class ZtlManagerU202 extends ZtlManager {
         return -1;
     }
 
+    @Override
+    public String getExternalSDCardPath() {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return null;
+        }
+        String path1 = "";// 内部存储路径
+        String path2 = "";// sd卡存储路径
+        String path3 = "";// usb存储路径
+        StorageManager mStorageManager = (StorageManager) mContext.getSystemService(Context.STORAGE_SERVICE);
+        Class<?> storageVolumeClazz = null;
+        try {
+            storageVolumeClazz = Class.forName("android.os.storage.StorageVolume");
+            Method getVolumeList = mStorageManager.getClass().getMethod("getVolumeList");
+            Method getPath = storageVolumeClazz.getMethod("getPath");
+            Method isRemovable = storageVolumeClazz.getMethod("isRemovable");
+            Method getDescription = storageVolumeClazz.getMethod("getDescription", Context.class);
+            Object result = getVolumeList.invoke(mStorageManager);
+            final int length = Array.getLength(result);
+            for (int i = 0; i < length; i++) {
+                Object storageVolumeElement = Array.get(result, i);
+                String path = (String) getPath.invoke(storageVolumeElement);
+                String description = (String) getDescription.invoke(storageVolumeElement, mContext);
+                boolean removable = (Boolean) isRemovable.invoke(storageVolumeElement);
+                if (true == removable) {// 可拆卸设备
+                    if (description.endsWith("USB") || description.endsWith("U 盘") || description.endsWith("USB 存储器")) {// usb外置卡
+//                        path3 = path;
+                        //Log.e("U盘", "外置U盘路径" + path3);
+                    } else if (description.endsWith("SD") || description.endsWith("SD 卡")) {//sd卡可判断
+                        path2 = path;
+                        //Log.e("外置SD卡11111111", "***********************" + path2);
+                    } else {//其它sd卡不可通过SD、SD卡来判断识别
+                        path2 = path;
+                        //Log.e("外置SD卡22222222", "***********************" + path2);
+                    }
+                } else {// 内置卡存储路径
+//                    path1 = path;
+                    //Log.e("内置存储卡", "----------------------------" + path1);
+                }
+            }
+            return path2;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
+    //系统-存储-获取U盘路径	1
+    @Override
+    public String getUsbStoragePath() {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return null;
+        }
+        String path1 = "";// 内部存储路径
+        String path2 = "";// sd卡存储路径
+        String path3 = "";// usb存储路径
+        StorageManager mStorageManager = (StorageManager) mContext.getSystemService(Context.STORAGE_SERVICE);
+        Class<?> storageVolumeClazz = null;
+        try {
+            storageVolumeClazz = Class.forName("android.os.storage.StorageVolume");
+            Method getVolumeList = mStorageManager.getClass().getMethod("getVolumeList");
+            Method getPath = storageVolumeClazz.getMethod("getPath");
+            Method isRemovable = storageVolumeClazz.getMethod("isRemovable");
+            Method getDescription = storageVolumeClazz.getMethod("getDescription", Context.class);
+            Object result = getVolumeList.invoke(mStorageManager);
+            final int length = Array.getLength(result);
+            for (int i = 0; i < length; i++) {
+                Object storageVolumeElement = Array.get(result, i);
+                String path = (String) getPath.invoke(storageVolumeElement);
+                String description = (String) getDescription.invoke(storageVolumeElement, mContext);
+                boolean removable = (Boolean) isRemovable.invoke(storageVolumeElement);
+                if (true == removable) {// 可拆卸设备
+                    if (description.endsWith("USB") || description.endsWith("U 盘") || description.endsWith("USB 存储器")) {// usb外置卡
+                        path3 = path;
+                        //Log.e("U盘", "外置U盘路径" + path3);
+                    } else if (description.endsWith("SD") || description.endsWith("SD 卡")) {//sd卡可判断
+//                        path2 = path;
+//                        Log.e("外置SD卡11111111", "***********************" + path2);
+                    } else {//其它sd卡不可通过SD、SD卡来判断识别
+//                        path2 = path;
+//                        Log.e("外置SD卡22222222", "***********************" + path2);
+                    }
+                } else {// 内置卡存储路径
+//                    path1 = path;
+                   // Log.e("内置存储卡", "----------------------------" + path1);
+                }
+            }
+            return path3;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     //显示-设置HDMI分辨率		1
     @Override
     public void setScreenMode(String mode) {
-        mode = mode.replace("@60p","");
+        mode = mode.replace("@60p", "");
         setSystemProperty("persist.ztl.hdmiresolution", mode);
         reboot(0);
     }
@@ -95,7 +192,7 @@ public class ZtlManagerU202 extends ZtlManager {
     //显示-设置屏幕方向 传入0 90 180 270
     @Override
     public void setDisplayOrientation(int rotation) {
-        setSystemProperty("persist.ztl.hwrotation",Integer.toString(rotation));
+        setSystemProperty("persist.ztl.hwrotation", Integer.toString(rotation));
         reboot(0);
     }
 

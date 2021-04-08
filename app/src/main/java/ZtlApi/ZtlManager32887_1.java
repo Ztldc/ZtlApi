@@ -1,14 +1,20 @@
 package ZtlApi;
 
+import android.content.Context;
 import android.content.Intent;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
+import android.os.storage.StorageManager;
 import android.util.Log;
 import android.os.SystemProperties;
 
@@ -53,6 +59,101 @@ public class ZtlManager32887_1 extends ZtlManager {
         String line = br.readLine();
         //	Log.d(TAG,"readStrFromFile - " + line);
         return line;
+    }
+
+    @Override
+    public String getExternalSDCardPath() {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return null;
+        }
+        String path1 = "";// 内部存储路径
+        String path2 = "";// sd卡存储路径
+        String path3 = "";// usb存储路径
+        StorageManager mStorageManager = (StorageManager) mContext.getSystemService(Context.STORAGE_SERVICE);
+        Class<?> storageVolumeClazz = null;
+        try {
+            storageVolumeClazz = Class.forName("android.os.storage.StorageVolume");
+            Method getVolumeList = mStorageManager.getClass().getMethod("getVolumeList");
+            Method getPath = storageVolumeClazz.getMethod("getPath");
+            Method isRemovable = storageVolumeClazz.getMethod("isRemovable");
+            Method getDescription = storageVolumeClazz.getMethod("getDescription", Context.class);
+            Object result = getVolumeList.invoke(mStorageManager);
+            final int length = Array.getLength(result);
+            for (int i = 0; i < length; i++) {
+                Object storageVolumeElement = Array.get(result, i);
+                String path = (String) getPath.invoke(storageVolumeElement);
+                String description = (String) getDescription.invoke(storageVolumeElement, mContext);
+                boolean removable = (Boolean) isRemovable.invoke(storageVolumeElement);
+                if (true == removable) {// 可拆卸设备
+                    if (description.endsWith("USB") || description.endsWith("U 盘") || description.endsWith("USB 存储器")) {// usb外置卡
+//                        path3 = path;
+                        //Log.e("U盘", "外置U盘路径" + path3);
+                    } else if (description.endsWith("SD") || description.endsWith("SD 卡")) {//sd卡可判断
+                        path2 = path;
+                        //Log.e("外置SD卡11111111", "***********************" + path2);
+                    } else {//其它sd卡不可通过SD、SD卡来判断识别
+                        path2 = path;
+                        //Log.e("外置SD卡22222222", "***********************" + path2);
+                    }
+                } else {// 内置卡存储路径
+//                    path1 = path;
+                    //Log.e("内置存储卡", "----------------------------" + path1);
+                }
+            }
+            return path2;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    //系统-存储-获取U盘路径	1
+    @Override
+    public String getUsbStoragePath() {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return null;
+        }
+        String path1 = "";// 内部存储路径
+        String path2 = "";// sd卡存储路径
+        String path3 = "";// usb存储路径
+        StorageManager mStorageManager = (StorageManager) mContext.getSystemService(Context.STORAGE_SERVICE);
+        Class<?> storageVolumeClazz = null;
+        try {
+            storageVolumeClazz = Class.forName("android.os.storage.StorageVolume");
+            Method getVolumeList = mStorageManager.getClass().getMethod("getVolumeList");
+            Method getPath = storageVolumeClazz.getMethod("getPath");
+            Method isRemovable = storageVolumeClazz.getMethod("isRemovable");
+            Method getDescription = storageVolumeClazz.getMethod("getDescription", Context.class);
+            Object result = getVolumeList.invoke(mStorageManager);
+            final int length = Array.getLength(result);
+            for (int i = 0; i < length; i++) {
+                Object storageVolumeElement = Array.get(result, i);
+                String path = (String) getPath.invoke(storageVolumeElement);
+                String description = (String) getDescription.invoke(storageVolumeElement, mContext);
+                boolean removable = (Boolean) isRemovable.invoke(storageVolumeElement);
+                if (true == removable) {// 可拆卸设备
+                    if (description.endsWith("USB") || description.endsWith("U 盘") || description.endsWith("USB 存储器")) {// usb外置卡
+                        path3 = path;
+                        //Log.e("U盘", "外置U盘路径" + path3);
+                    } else if (description.endsWith("SD") || description.endsWith("SD 卡")) {//sd卡可判断
+//                        path2 = path;
+//                        Log.e("外置SD卡11111111", "***********************" + path2);
+                    } else {//其它sd卡不可通过SD、SD卡来判断识别
+//                        path2 = path;
+//                        Log.e("外置SD卡22222222", "***********************" + path2);
+                    }
+                } else {// 内置卡存储路径
+//                    path1 = path;
+                    // Log.e("内置存储卡", "----------------------------" + path1);
+                }
+            }
+            return path3;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public void LwlTest(int a) {
@@ -206,6 +307,16 @@ public class ZtlManager32887_1 extends ZtlManager {
         String fmt = String.format("echo " + mode + " >/sys/bus/platform/devices/ffa30000.gpu/devfreq/ffa30000.gpu/governor");
         execRootCmdSilent(fmt);
     }
+
+    @Override
+    public int getCPUTemp() {
+        String value = getOnelinevalue("/sys/class/thermal/thermal_zone0/temp");
+        if (value != null)
+            return Integer.valueOf(value) / 1000;
+
+        return -1;
+    }
+
 }
 
 	

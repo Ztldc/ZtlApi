@@ -82,7 +82,8 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.4
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.5
+//20210408 更新瑞芯微平台7.1获取U盘\外部SD卡路径接口
 //20210322 添加获取插入U盘个数，返回指定索引U盘路径接口
 //20210311 添加设置GPIO方式
 //20210304 添加设置系统桌面壁纸接口
@@ -144,7 +145,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "4.4";
+        return "4.5";
     }
 
     protected Context mContext;
@@ -484,18 +485,15 @@ public class ZtlManager {
                     }
                     usbPath = files[0].getAbsolutePath();
                     if (usbPath.contains("USB_DISK")) { //open USB_DISK
-                        Log.e("steve : open ", "" + usbPath);
                         File usbFile = new File(usbPath); //steve 5.1OS maybe /usbPath + /udisk0
                         if (usbFile.exists() && usbFile.isDirectory()) {
                             File[] usbFiles = usbFile.listFiles();
                             if (usbFiles.length == 1) {
                                 usbPath = usbFiles[0].getAbsolutePath();    //udisk0
-                                Log.e("steve : usbPath ", "" + usbPath);
                             } else {
                                 for (int i = 0; i < usbFiles.length; i++) {
                                     if (usbFiles[i].getAbsolutePath().contains("(") == false) {
                                         usbPath = usbFiles[i].getAbsolutePath();    //udisk0
-                                        Log.e("steve : usbPath ", "" + usbPath);
                                         break;
                                     }
                                 }
@@ -1148,7 +1146,7 @@ public class ZtlManager {
         mContext.startService(intent);
     }
 
-    //APP-卸载APP
+    //APP-静默卸载APP
     public void uninstallAppSilent(String packageName) {
         try {
             execRootCmdSilent("pm uninstall " + packageName);
@@ -2547,7 +2545,7 @@ public class ZtlManager {
             Log.e(TAG, "输入值" + type + " 错误，请输入正确的参数");
             return -2;
         }
-        String[] gpioName = GpioName.GpioNameMap.get(devType);
+        String[] gpioName = Gpio.GpioNameMap.get(devType);
         Gpio gpio = new Gpio();
         if (gpio.open(gpioName[type]) == false) {
             return -3;
@@ -2586,7 +2584,7 @@ public class ZtlManager {
             return -2;
         }
 
-        String[] gpioName = GpioName.GpioNameMap.get(devType);
+        String[] gpioName = Gpio.GpioNameMap.get(devType);
         Gpio gpio = new Gpio();
         if (gpio.open(gpioName[type]) == false) {
             return -3;
@@ -2890,6 +2888,54 @@ public class ZtlManager {
         }
         cpuInfo.setCPUFreq(cpu_freq);
     }
+
+    public int getCPUTemp() {
+        String value = getOnelinevalue("/sys/bus/platform/drivers/tsadc/ff280000.tsadc/temp1_input");
+        if (value != null)
+            return Integer.valueOf(value);
+
+        return -1;
+    }
+
+    static String getOnelinevalue(String path) {
+        List<String> astring = getLines(path, 1);
+        if (astring != null)
+            return astring.get(0);
+        else
+            return null;
+    }
+
+    static List<String> getLines(String path, int lineCount) {
+        FileReader fr = null;
+        BufferedReader br = null;
+        List<String> lines = new ArrayList<>();
+        try {
+            fr = new FileReader(path);
+            br = new BufferedReader(fr);
+
+            String text;
+            int curLine = 0;
+            while (curLine < lineCount) {
+                text = br.readLine();
+                if (text == null)
+                    break;
+
+                curLine++;
+                lines.add(text);
+            }
+
+            fr.close();
+            fr = null;
+            return lines;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
     //end
 
 

@@ -326,4 +326,9 @@ public class ZtlManagerA33_A64 extends ZtlManager {
         return gpios.get(strGpioName);
     }
 
+    @Override
+    public String[] getCPUFreq(){
+        return null;
+    }
+
 }

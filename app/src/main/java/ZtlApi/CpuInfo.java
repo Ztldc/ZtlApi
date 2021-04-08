@@ -340,7 +340,7 @@ public class CpuInfo {
             return (int) aaa;
         }
 
-        int getCPUTemp() {
+        public int getCPUTemp() {
             String value = getOnelinevalue("/sys/class/thermal/thermal_zone0/temp");
             if (value != null)
                 return Integer.valueOf(value) / 1000;
@@ -468,7 +468,7 @@ public class CpuInfo {
         }
 
         @Override
-        int getCPUTemp() {
+        public int getCPUTemp() {
             int temp = super.getCPUTemp();
             return temp / 1000;
         }
@@ -521,7 +521,7 @@ public class CpuInfo {
         }
 
         @Override
-        int getCPUTemp() {
+        public int getCPUTemp() {
             return -1;
         }
 
@@ -556,7 +556,7 @@ public class CpuInfo {
         }
 
         @Override
-        int getCPUTemp() {
+        public int getCPUTemp() {
             String value = getOnelinevalue("/sys/class/thermal/thermal_zone0/temp");
             if (value != null)
                 return Integer.valueOf(value) / 1000;
@@ -622,7 +622,7 @@ public class CpuInfo {
         }
 
         @Override
-        int getCPUTemp() {
+        public int getCPUTemp() {
             return -1;
         }
 
@@ -665,7 +665,7 @@ public class CpuInfo {
         }
 
         @Override
-        int getCPUTemp() {
+        public int getCPUTemp() {
             //root@tulip-p1_v1:/sys/class/thermal/thermal_zone0 # cat temp
             //52
             String value = getOnelinevalue("/sys/class/thermal/thermal_zone0/temp");
