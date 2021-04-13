@@ -82,7 +82,8 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.5
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.6
+//20210412 添加i2c铁电存储器接口
 //20210408 更新瑞芯微平台7.1获取U盘\外部SD卡路径接口
 //20210322 添加获取插入U盘个数，返回指定索引U盘路径接口
 //20210311 添加设置GPIO方式
@@ -145,7 +146,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "4.5";
+        return "4.6";
     }
 
     protected Context mContext;
@@ -167,8 +168,7 @@ public class ZtlManager {
     String TP_ORIENTATION_PROP = "persist.sys.tp.orientation";
 
     static ZtlManager Instance;
-    CpuInfo cpuInfo;
-
+    private CpuInfo cpuInfo;
     private static boolean isOpenWatchDog = false;
 
     private native static int setScreenResolution(String path);
@@ -2504,6 +2504,89 @@ public class ZtlManager {
         String readData = null;
         reader.close();
         return fileData.toString();
+    }
+
+    //文件-打开铁电存储器
+    //filePath:i2c地址，如"/dev/i2c-1"
+    //chipID：写入的i2c器件地址,注意不要跟系统的起冲突,否则会导致系统加密校验失败起不来
+    //addrLen：写入的地址位长度 比如RC16就是1位地址长度(支持读取8位地址。也就是你只能在read write参数1里传入0-255),RC128就是2位地址长度.具体看器件文档
+    private ZtlI2C ztlI2C;
+    public boolean openZtlI2C(String filePath, int chipID,  int addrLen){
+        if (ztlI2C == null){
+             ztlI2C = new ZtlI2C();
+        }else {
+            Log.e(TAG,"openZtlI2C()  上次使用未关闭,有泄露，不执行");
+            return false;
+        }
+
+        boolean isOpen = ztlI2C.open(filePath, chipID, addrLen);
+        if (isOpen){
+            return true;
+        }else{
+            ztlI2C = null;
+            return false;
+        }
+    }
+
+    //文件-铁电存储器专用写接口，使用前需要先调用：openZtlI2C()接口
+    //参数：1.写入的地址，如：0xa1、0xa2等
+    //2.内容，如：0x70, 0x11, 0x22, 0x33, (byte)0x55,等
+    //3.内容长度，如：12，代表读取存储器长度
+    public void flashWrite(int addr, byte[]data, int nCount){
+        if (ztlI2C == null){
+            Log.e(TAG,"flashWrite() ztlI2C 为空，不执行");
+            return;
+        }
+
+        ztlI2C.flash_write(addr, data, nCount);
+    }
+
+    //文件-铁电存储器专用读接口，使用前需要先调用：openZtlI2C()接口
+    //参数：1.读地址，地址长度是1时，请不要传入大于255的值。否则一切后果自负
+    //2.读内容长度
+    public byte[] flashRead(int addr, int nCount){
+        if (ztlI2C == null){
+            Log.e(TAG,"flashRead() ztlI2C 为空，不执行");
+            return null;
+        }
+
+        return ztlI2C.flash_read(addr, nCount);
+    }
+
+    //文件-加密芯片专用写接口，使用前需要先调用：openZtlI2C()接口
+    // 参数说明：
+    // cmd：芯片里面程序代码的命令码
+    // data：数据内容，如：0x70, 0x11, 0x22, 0x33, (byte)0x55,等
+    // nCount：内容长度，如：12，代表读取存储器长度
+    public void chipWrite(int cmd, byte[] data, int nCount){
+        if (ztlI2C == null){
+            Log.e(TAG,"chipWrite() ztlI2C 为空，不执行");
+            return;
+        }
+
+        ztlI2C.chip_write(cmd, data, nCount);
+    }
+
+    //文件-加密芯片专用读接口，使用前需要先调用：openZtlI2C()接口
+    // 参数：
+    // cmd:要读的内容，就是你芯片里面代码的命令码，根据命令码返回的数据,如果要直接读（比如你上次调用写后要直接获取返回），需要传入-1.
+    // nCount:要读的个数
+    //如果写了以后马上要读 最好间隔10ms或以上
+    public byte[] chipRead(int cmd, int nCount){
+        if (ztlI2C == null){
+            Log.e(TAG,"chipRead() ztlI2C 为空，不执行");
+            return null;
+        }
+
+        return ztlI2C.chip_read(cmd, nCount);
+    }
+
+    //文件-关闭铁电存储器
+    public void closeI2C(){
+        if (ztlI2C != null){
+            ztlI2C.close();
+            ztlI2C = null;
+        }
     }
 
     //GPIO计算方式

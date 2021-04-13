@@ -11,6 +11,10 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            // 设置支持的SO库架构 解决64位so方法
+            abiFilters 'armeabi', 'armeabi-v7a'
+        }
     }
 
     //执行lint检查，有任何的错误或者警告提示，都会终止构建
@@ -46,6 +50,39 @@ android {
     }
     //以上是为了找到android.os.SystemProperties这个隐藏的类
 
+//
+//    // 将 .so 文件打包为 Native_Libs.jar 包文件
+//    task nativeLibsToJar(type: Zip, description: "create a jar archive of the native libs") {
+//        destinationDir file("../prebuild")
+//        baseName "ZtlI2C"
+//        extension "jar"
+//        from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
+//        into "lib"
+//    }
+//    tasks.withType(JavaCompile) {
+//        compileTask -> compileTask.dependsOn(nativeLibsToJar)
+//    }
+//
+//    sourceSets.main{
+//        jniLibs.srcDirs = ['../prebuild'];
+//    }
+
+    // 将 .so 文件打包为 Native_Libs.jar 包文件
+    task nativeLibsToJar(type: Zip, description: "create a jar archive of the native libs") {
+        destinationDir file('../prebuild')
+        baseName "Native_Libs2"
+        extension "jar"
+        from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
+        into "lib"
+    }
+    tasks.withType(JavaCompile) {
+        compileTask -> compileTask.dependsOn(nativeLibsToJar)
+    }
+
+    sourceSets.main{
+        jniLibs.srcDirs = ['../prebuild'];
+    }
+
 }
 
 dependencies {
@@ -62,10 +99,12 @@ dependencies {
 task makeJar(type: Jar) {
     //生成的jar的名称
     getArchiveFileName().set( 'ZtlApi.jar')
+    //from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
 
     //需要合并的jar的路径+名称
     //from(project.zipTree('build/intermediates/compile_library_classes/debug/classes.jar'))
     //from(project.zipTree('build/intermediates/aar_main_jar/release/classes.jar')) //混淆的jar
+    from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
     from(project.zipTree('build/intermediates/aar_main_jar/debug/classes.jar'))
 
     //输出到的位置
