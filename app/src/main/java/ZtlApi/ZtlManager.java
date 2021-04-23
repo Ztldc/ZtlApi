@@ -82,7 +82,9 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.6
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.8
+//20210423 更新获取外部SD卡接口
+//20210422 添加3399Pro主板接口、更新获取U盘路径、U盘列表、获取索引U盘路径、获取U盘个数接口
 //20210412 添加i2c铁电存储器接口
 //20210408 更新瑞芯微平台7.1获取U盘\外部SD卡路径接口
 //20210322 添加获取插入U盘个数，返回指定索引U盘路径接口
@@ -146,7 +148,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "4.6";
+        return "4.8";
     }
 
     protected Context mContext;
@@ -182,7 +184,10 @@ public class ZtlManager {
             if (devType.contains("3288") && getAndroidVersion().contains("5.1")) {
                 Instance = new ZtlManager();
             } else if (devType.contains("3399")) {
-                Instance = new ZtlManager33997_1();
+                if (getAndroidVersion().contains("7.1")){
+                    Instance = new ZtlManager33997_1();
+                }else
+                    Instance = new ZtlManager3399Pro();
             } else if (devType.contains("3288") && getAndroidVersion().contains("7.1")) {
                 Instance = new ZtlManager32887_1();
             } else if (devType.contains("3328")) {
@@ -323,21 +328,22 @@ public class ZtlManager {
 
     //系统-存储-获取外部SD卡路径	1
     public String getExternalSDCardPath() {
-        String path = null;
-        path = getAppRootOfSdCardRemovable();
-        return path;
+        return getAppRootOfSdCardRemovable();
     }
 
     //系统-储存-获取外部SD卡路径
     private String getAppRootOfSdCardRemovable() {
-        if (mContext == null) {
-            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
-            return null;
+        if (ZtlManager.GetInstance().getAndroidVersion().contains("5.1")){
+            File file = new File("/mnt/external_sd");
+            //获取该目录下的所有文件
+            String[] files = file.list();
+            if (files != null && files.length > 0){
+                return "/mnt/external_sd";
+            } else {
+                return null;
+            }
         }
 
-        if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-            return null;
-        }
         /**
          * 这一句取的还是内置卡的目录。
          * /storage/emulated/0/Android/data/com.newayte.nvideo.phone/cache
@@ -360,9 +366,7 @@ public class ZtlManager {
                 String description = (String) getDescription.invoke(storageVolumeElement, mContext);
                 boolean removable = (Boolean) isRemovable.invoke(storageVolumeElement);
                 if (true == removable) {// 可拆卸设备
-                    if(description.endsWith("SD")||description.endsWith("SD 卡")){//sd卡可判断
-                        return path;
-                    }else{//其它sd卡不可通过SD、SD卡来判断识别
+                    if (description.contains("SD") || description.contains("SD 卡")) {//sd卡可判断
                         return path;
                     }
                 }
@@ -375,137 +379,64 @@ public class ZtlManager {
 
     //系统-存储-返回插入的U盘个数
     public int getUSBDiskCount() {
-        String usbPath = null;
-        String usbBasePath = "";
-        if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
-            usbBasePath = "/mnt/usb_storage/";
-        } else if (getAndroidVersion().contains("6") || getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
-            usbBasePath = "/storage/";
-        }
-        File file = new File(usbBasePath);
-        try{
-            if (file.exists() && file.isDirectory()){
-                File[] files = file.listFiles();
-                if (files.length > 0){
-                    usbPath = files[0].getAbsolutePath();
-                    if (usbPath.contains("USB_DISK")) { //open USB_DISK
-                        File usbFile = new File(usbPath); //steve 5.1OS maybe /usbPath + /udisk0
-                        if (usbFile.exists() && usbFile.isDirectory()) {
-                            File[] usbFiles = usbFile.listFiles();
-                            return usbFiles.length;
-                        }
-                    }
-                }
-
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        return -1;
+        return getUSBDisks().size();
     }
 
     //系统-存储-返回指定索引的U盘   U盘不存在时返回null，输入的索引错误时返回null
     public String getUSBDisk(int index) {
+        if (index < 0) {
+            return null;
+        }
+        List<String> usbDisks = getUSBDisks();
+        if (usbDisks.size() <= 0) {
+            return null;
+        }
+        if (index >= usbDisks.size()) {
+            return null;
+        }
+        return usbDisks.get(index);
+    }
+
+    //获取U盘列表
+    public List<String> getUSBDisks() {
         String usbPath = null;
         String usbBasePath = "";
 
         if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
             usbBasePath = "/mnt/usb_storage/";
-        } else if (getAndroidVersion().contains("6") || getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
+        } else
             usbBasePath = "/storage/";
-        }
-
+        //if (getAndroidVersion().contains("6") || getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
+        List<String> Files1 = new ArrayList<>();
         File file = new File(usbBasePath);
         try {
             if (file.exists() && file.isDirectory()) { //open usb_storage
                 File[] files = file.listFiles();
                 if (files.length > 0) {
-                    List<String> Files1 = new ArrayList<>();
+
                     for (int i = 0; i < files.length; i++) {
                         String absPath = files[i].getAbsolutePath();
-                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")) {
+                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self") || absPath.equals(getAppRootOfSdCardRemovable())) {
                             continue;
                         } else {
                             Files1.add(absPath);
                         }
                     }
-                    if (Files1.size() == 0) {
-                        return null;
-                    }
-                    usbPath = files[index].getAbsolutePath();
-                    if (usbPath.contains("USB_DISK")) { //open USB_DISK
-                        File usbFile = new File(usbPath); //steve 5.1OS maybe /usbPath + /udisk0
-                        if (usbFile.exists() && usbFile.isDirectory()) {
-                            File[] usbFiles = usbFile.listFiles();
-                            if (usbFiles.length != 0) {
-                                usbPath = usbFiles[index].getAbsolutePath();    //udisk0
-                            }
-                        }
-                    }//end open USB_DISK
                 }
             }//end open usb_storage
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return usbPath;
-    }
-
-    //系统-存储-返回U盘列表
-    public List<String> getUSBDisks() {
-        return null;
+        return Files1;
     }
 
     //系统-存储-获取U盘路径	1
     public String getUsbStoragePath() {
-        String usbPath = null;
-        String usbBasePath = "";
-
-        if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
-            usbBasePath = "/mnt/usb_storage/";
-        } else if (getAndroidVersion().contains("6") || getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
-            usbBasePath = "/storage/";
+        List<String> usbPath = getUSBDisks();
+        if (usbPath.size() == 0) {
+            return null;
         }
-
-        File file = new File(usbBasePath);
-        try {
-            if (file.exists() && file.isDirectory()) { //open usb_storage
-                File[] files = file.listFiles();
-                if (files.length > 0) {
-                    List<String> Files1 = new ArrayList<>();
-                    for (int i = 0; i < files.length; i++) {
-                        String absPath = files[i].getAbsolutePath();
-                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")) {
-                            continue;
-                        } else {
-                            Files1.add(absPath);
-                        }
-                    }
-                    if (Files1.size() == 0) {
-                        return null;
-                    }
-                    usbPath = files[0].getAbsolutePath();
-                    if (usbPath.contains("USB_DISK")) { //open USB_DISK
-                        File usbFile = new File(usbPath); //steve 5.1OS maybe /usbPath + /udisk0
-                        if (usbFile.exists() && usbFile.isDirectory()) {
-                            File[] usbFiles = usbFile.listFiles();
-                            if (usbFiles.length == 1) {
-                                usbPath = usbFiles[0].getAbsolutePath();    //udisk0
-                            } else {
-                                for (int i = 0; i < usbFiles.length; i++) {
-                                    if (usbFiles[i].getAbsolutePath().contains("(") == false) {
-                                        usbPath = usbFiles[i].getAbsolutePath();    //udisk0
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }//end open USB_DISK
-                }
-            }//end open usb_storage
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return usbPath;
+        return usbPath.get(0);
     }
 
     //系统-休眠 ->ZtlHelper
@@ -1046,20 +977,9 @@ public class ZtlManager {
 
         dos.writeBytes(cmd + "\n");
         dos.flush();
-        try {
-            Thread.sleep(10);
-            dos.writeBytes("exit\n");
-            dos.flush();
-        } catch (Exception e) {
 
-        }
-
-//        String value = getSystemProperty("ztl.result", "-1");
-//        Log.e("_execCmdAsSU", "value ==============" + value);
-//        if (value.equals("-1") || value.equals("0")){
-//            Log.e("_execCmdAsSU", "value " + value);
-//            throw new FileNotFoundException();
-//        }
+        dos.writeBytes("exit\n");
+        dos.flush();
 
         int result = p.waitFor();
         dos.close();
@@ -2511,18 +2431,19 @@ public class ZtlManager {
     //chipID：写入的i2c器件地址,注意不要跟系统的起冲突,否则会导致系统加密校验失败起不来
     //addrLen：写入的地址位长度 比如RC16就是1位地址长度(支持读取8位地址。也就是你只能在read write参数1里传入0-255),RC128就是2位地址长度.具体看器件文档
     private ZtlI2C ztlI2C;
-    public boolean openZtlI2C(String filePath, int chipID,  int addrLen){
-        if (ztlI2C == null){
-             ztlI2C = new ZtlI2C();
-        }else {
-            Log.e(TAG,"openZtlI2C()  上次使用未关闭,有泄露，不执行");
+
+    public boolean openZtlI2C(String filePath, int chipID, int addrLen) {
+        if (ztlI2C == null) {
+            ztlI2C = new ZtlI2C();
+        } else {
+            Log.e(TAG, "openZtlI2C()  上次使用未关闭,有泄露，不执行");
             return false;
         }
 
         boolean isOpen = ztlI2C.open(filePath, chipID, addrLen);
-        if (isOpen){
+        if (isOpen) {
             return true;
-        }else{
+        } else {
             ztlI2C = null;
             return false;
         }
@@ -2532,9 +2453,9 @@ public class ZtlManager {
     //参数：1.写入的地址，如：0xa1、0xa2等
     //2.内容，如：0x70, 0x11, 0x22, 0x33, (byte)0x55,等
     //3.内容长度，如：12，代表读取存储器长度
-    public void flashWrite(int addr, byte[]data, int nCount){
-        if (ztlI2C == null){
-            Log.e(TAG,"flashWrite() ztlI2C 为空，不执行");
+    public void flashWrite(int addr, byte[] data, int nCount) {
+        if (ztlI2C == null) {
+            Log.e(TAG, "flashWrite() ztlI2C 为空，不执行");
             return;
         }
 
@@ -2544,9 +2465,9 @@ public class ZtlManager {
     //文件-铁电存储器专用读接口，使用前需要先调用：openZtlI2C()接口
     //参数：1.读地址，地址长度是1时，请不要传入大于255的值。否则一切后果自负
     //2.读内容长度
-    public byte[] flashRead(int addr, int nCount){
-        if (ztlI2C == null){
-            Log.e(TAG,"flashRead() ztlI2C 为空，不执行");
+    public byte[] flashRead(int addr, int nCount) {
+        if (ztlI2C == null) {
+            Log.e(TAG, "flashRead() ztlI2C 为空，不执行");
             return null;
         }
 
@@ -2558,9 +2479,9 @@ public class ZtlManager {
     // cmd：芯片里面程序代码的命令码
     // data：数据内容，如：0x70, 0x11, 0x22, 0x33, (byte)0x55,等
     // nCount：内容长度，如：12，代表读取存储器长度
-    public void chipWrite(int cmd, byte[] data, int nCount){
-        if (ztlI2C == null){
-            Log.e(TAG,"chipWrite() ztlI2C 为空，不执行");
+    public void chipWrite(int cmd, byte[] data, int nCount) {
+        if (ztlI2C == null) {
+            Log.e(TAG, "chipWrite() ztlI2C 为空，不执行");
             return;
         }
 
@@ -2572,9 +2493,9 @@ public class ZtlManager {
     // cmd:要读的内容，就是你芯片里面代码的命令码，根据命令码返回的数据,如果要直接读（比如你上次调用写后要直接获取返回），需要传入-1.
     // nCount:要读的个数
     //如果写了以后马上要读 最好间隔10ms或以上
-    public byte[] chipRead(int cmd, int nCount){
-        if (ztlI2C == null){
-            Log.e(TAG,"chipRead() ztlI2C 为空，不执行");
+    public byte[] chipRead(int cmd, int nCount) {
+        if (ztlI2C == null) {
+            Log.e(TAG, "chipRead() ztlI2C 为空，不执行");
             return null;
         }
 
@@ -2582,8 +2503,8 @@ public class ZtlManager {
     }
 
     //文件-关闭铁电存储器
-    public void closeI2C(){
-        if (ztlI2C != null){
+    public void closeI2C() {
+        if (ztlI2C != null) {
             ztlI2C.close();
             ztlI2C = null;
         }

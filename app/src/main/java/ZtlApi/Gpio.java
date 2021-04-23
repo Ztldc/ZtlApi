@@ -179,6 +179,7 @@ public class Gpio {
         writeGpioNode(this.mGpioPortValue, Integer.toString(value));
     }
 
+    int trynCount = 0;//表示获取权限的次数
     private void writeGpioNode(File file, String value) {
         if (file.exists() == false)
             return;
@@ -192,11 +193,18 @@ public class Gpio {
                 fos.write(value.getBytes(), 0, value.getBytes().length);
                 fos.flush();
                 fos.close();
+                trynCount = 0;
             } catch (IOException e) {
                 String error = e.toString();
                 if (error.contains("Permission denied")) {
+                    trynCount++;
                     ZtlManager.GetInstance().execRootCmdSilent("chmod 777 " + file.getAbsolutePath());
                     Log.e(TAG, "正在申请权限");
+                    //判断节点是否有权限，没有权限的话退出
+                    if (trynCount > 2){
+                        Log.e(TAG, "权限申请不通过");
+                        return;
+                    }
                     writeGpioNode(file, value);
                 } else {
                     Log.e(TAG, "writeGpioNode " + gpio_name + " 错误");
