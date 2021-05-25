@@ -20,6 +20,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 
 import android.content.pm.ApplicationInfo;
@@ -73,8 +74,6 @@ import android.app.PendingIntent;
 
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RequiresPermission;
-import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
 
 import static java.util.Calendar.DAY_OF_MONTH;
 import static java.util.Calendar.HOUR_OF_DAY;
@@ -82,9 +81,11 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.8
+//这个类是3288_5.1  todo 记得每一次修改，都要添加API版本号     目前版本：4.9(待定5.1，添加杰发API未增加)
+//20210519 添加定时重启-一次性、定时重启-周期接口
+//20210510 添加杰发kt11_32 主板API，未做测试
 //20210423 更新获取外部SD卡接口
-//20210422 添加3399Pro主板接口、更新获取U盘路径、U盘列表、获取索引U盘路径、获取U盘个数接口
+//20210422 添加3399Pro主板接口、更新获取U盘路径、U盘列表、获取索引U盘路径、获取U盘个数接口、更新S905D3截图接口
 //20210412 添加i2c铁电存储器接口
 //20210408 更新瑞芯微平台7.1获取U盘\外部SD卡路径接口
 //20210322 添加获取插入U盘个数，返回指定索引U盘路径接口
@@ -95,8 +96,7 @@ import static java.util.Calendar.YEAR;
 //20210227 去除获取sim卡信息强制权限、适配3128-4.4;添加获取4G故障状态码
 //20210223 添加锁屏/设置锁屏密码接口
 //20210221 添加ZtlManagerU202 对应板子S905D3
-//20210203 添加判断系统是否支持看门狗功能、打开/关闭看门狗、看门狗喂狗、看门狗是否正在运行、读取看门狗的值接口
-//         添加ZtlManagerA40i
+//20210203 添加判断系统是否支持看门狗功能、打开/关闭看门狗、看门狗喂狗、看门狗是否正在运行、读取看门狗的值接口、添加ZtlManagerA40i
 //20210126 添加设置指定音量的音量值、获取指定音量的音量值、获取指定音量的最大音量值接口
 //20210125 添加设置系统铃声接口
 //20210119 3288-7.1的GPIO值，从0-24不需要计算，修复此问题
@@ -148,7 +148,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "4.8";
+        return "4.9";
     }
 
     protected Context mContext;
@@ -184,9 +184,9 @@ public class ZtlManager {
             if (devType.contains("3288") && getAndroidVersion().contains("5.1")) {
                 Instance = new ZtlManager();
             } else if (devType.contains("3399")) {
-                if (getAndroidVersion().contains("7.1")){
+                if (getAndroidVersion().contains("7.1")) {
                     Instance = new ZtlManager33997_1();
-                }else
+                } else
                     Instance = new ZtlManager3399Pro();
             } else if (devType.contains("3288") && getAndroidVersion().contains("7.1")) {
                 Instance = new ZtlManager32887_1();
@@ -206,6 +206,10 @@ public class ZtlManager {
                 Instance = new ZtlManagerA40i();
             } else if (devType.contains("u202")) {
                 Instance = new ZtlManagerU202();
+            } else if (devType.contains("3568")) {
+                Instance = new ZtlManager3568();
+            } else if (devType.contains("kt11")) {
+                Instance = new ZtlManagerkt11_32();
             }
             if (Instance == null) {
                 Instance = new ZtlManager();
@@ -333,11 +337,11 @@ public class ZtlManager {
 
     //系统-储存-获取外部SD卡路径
     private String getAppRootOfSdCardRemovable() {
-        if (ZtlManager.GetInstance().getAndroidVersion().contains("5.1")){
+        if (ZtlManager.GetInstance().getAndroidVersion().contains("5.1")) {
             File file = new File("/mnt/external_sd");
             //获取该目录下的所有文件
             String[] files = file.list();
-            if (files != null && files.length > 0){
+            if (files != null && files.length > 0) {
                 return "/mnt/external_sd";
             } else {
                 return null;
@@ -402,8 +406,8 @@ public class ZtlManager {
         String usbPath = null;
         String usbBasePath = "";
 
-        if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
-            usbBasePath = "/mnt/usb_storage/";
+        if (getAndroidVersion().contains("5.1")) {
+            usbBasePath = "/mnt/usb_storage/USB_DISK0";
         } else
             usbBasePath = "/storage/";
         //if (getAndroidVersion().contains("6") || getAndroidVersion().contains("7.1") || getAndroidVersion().contains("9")) {
@@ -413,13 +417,18 @@ public class ZtlManager {
             if (file.exists() && file.isDirectory()) { //open usb_storage
                 File[] files = file.listFiles();
                 if (files.length > 0) {
-
                     for (int i = 0; i < files.length; i++) {
                         String absPath = files[i].getAbsolutePath();
                         if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self") || absPath.equals(getAppRootOfSdCardRemovable())) {
                             continue;
                         } else {
                             Files1.add(absPath);
+                        }
+                    }
+                    for (int i = 0; i < Files1.size(); i++) {
+                        if (Files1.get(i).contains("(") == false) {
+                            Files1 = Collections.singletonList(Files1.get(i));    //udisk0
+                            break;
                         }
                     }
                 }
@@ -445,7 +454,6 @@ public class ZtlManager {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
         }
-
         ComponentName componetName = new ComponentName(
                 "com.ztl.helper",
                 "com.ztl.helper.ZTLHelperService");
@@ -462,7 +470,6 @@ public class ZtlManager {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
         }
-
         ComponentName componetName = new ComponentName(
                 "com.ztl.helper",  //这个参数是另外一个app的包名
                 "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
@@ -479,7 +486,6 @@ public class ZtlManager {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
         }
-
         ComponentName componetName = new ComponentName(
                 "com.ztl.helper",  //这个参数是另外一个app的包名
                 "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
@@ -693,9 +699,14 @@ public class ZtlManager {
     }
 
     //系统-获取生成的序列号
+    @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
     public String getBuildSerial() {
         String sn = "";
-        sn = getSystemProperty("persist.sys.ztlsn", "unknown");
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            sn = Build.getSerial();
+        } else {
+            sn = getSystemProperty("persist.sys.ztlsn", "unknown");
+        }
         return sn;
     }
 
@@ -1447,6 +1458,50 @@ public class ZtlManager {
         setSystemProperty("persist.sys.powerOffTimeMillis", targetTime + "");
     }
 
+    //定时重启-一次性
+    public void timingRebootAlarm(int year, int month, int day, int hour, int minute, boolean enable) {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.YEAR, year);
+        cal.set(Calendar.MONTH, month);
+        cal.set(Calendar.DAY_OF_MONTH, day);
+        cal.set(Calendar.HOUR_OF_DAY, hour);
+        cal.set(Calendar.MINUTE, minute);
+        setTimingReboot(cal.getTimeInMillis(), 0, enable);
+        Log.i("设置一次性定时重启", "时间为" + year + "年" + (month + 1) + "月" + day + "日" + hour + "时" + minute + "分");
+    }
+
+    //定时重启-周期
+    public void timingReboot(int hour, int minute, int week, boolean enable) {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, hour);
+        cal.set(Calendar.MINUTE, minute);
+        setTimingReboot(cal.getTimeInMillis(), week, enable);
+        Log.i("设置定时重启", "时间为" + hour + "时" + minute + "分," + "周期为：" + week);
+    }
+
+    //定时重启
+    private void setTimingReboot(long timestamp, int period, boolean enable) {
+
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "timingReboot");
+        intent.putExtra("timestamp", timestamp);
+        intent.putExtra("period", period);
+        intent.putExtra("enable", enable);
+
+        mContext.startService(intent);
+
+    }
+
     //封装以待更改
     void _setPowerOn(long sec, boolean isEveryDay) {
 
@@ -1500,6 +1555,16 @@ public class ZtlManager {
         wm.getDefaultDisplay().getRealMetrics(metrics);
         int height = metrics.heightPixels;
         return height;
+    }
+
+    public String[] getHDMIResolutions() {
+
+        Log.e("设置HDMI分辨率", "5.1 7.1待做");
+        return null;
+    }
+
+    public void setHDMIResolution(String value) {
+        Log.e("设置HDMI分辨率", "5.1 7.1待做");
     }
 
     //显示-获取屏幕x轴像素	1
