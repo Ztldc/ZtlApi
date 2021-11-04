@@ -276,10 +276,10 @@ public class ZtlManager3128 extends ZtlManager {
             return;
         }
 
-        if (bOpen){
+        if (bOpen) {
             Intent systemBarOpen = new Intent("ZTL.ACTION.OPEN.SYSTEMBAR");
             mContext.sendBroadcast(systemBarOpen);
-        }else{
+        } else {
             Intent systemBarClose = new Intent("ZTL.ACTION.CLOSE.SYSTEMBAR");
             mContext.sendBroadcast(systemBarClose);
         }
@@ -343,6 +343,22 @@ public class ZtlManager3128 extends ZtlManager {
         String modes[] = displayModes.split(",");
 
         return modes;
+    }
+
+    //显示-获取HDMI状态
+    @Override
+    public String getHDMIState() {
+        return execRootCmd("cat /sys/devices/virtual/switch/hdmi/state");
+    }
+
+    //显示-设置HDMI开关(true:使能/false:不使能)
+    @Override
+    public void setHDMIEnable(boolean enable) {
+        if (enable) {
+            execRootCmdSilent("echo 1 > /sys/devices/virtual/display/HDMI/enable");
+        } else {
+            execRootCmdSilent("echo 0 > /sys/devices/virtual/display/HDMI/enable");
+        }
     }
 
     //设置分辨率		1

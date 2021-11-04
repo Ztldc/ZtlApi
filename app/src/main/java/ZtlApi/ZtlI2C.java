@@ -4,9 +4,16 @@ package ZtlApi;
 //如需扩展，请自行修改代码。本公司不提供技术支持。如需额外技术支持，请联系业务洽谈。
 //具体用法请参看MainActivity的用法
 
+import android.util.Log;
+
 public class ZtlI2C {
     static{
-        System.loadLibrary("customi2c");
+        try{
+            System.loadLibrary("customi2c");
+        }catch (Exception e){
+            Log.e("ZtlI2C", "缺少so库，请联系智通利技术支持");
+            e.printStackTrace();
+        }
     }
 
     //addrLen：铁电存储器 看规格书。加密芯片：=1

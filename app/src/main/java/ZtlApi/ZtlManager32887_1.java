@@ -73,6 +73,18 @@ public class ZtlManager32887_1 extends ZtlManager {
         }
     }
 
+    //显示-获取HDMI分辨率列表
+    public String[] getHDMIResolutions() {
+        try{
+            String sss = loadFileAsString("/sys/class/drm/card0-HDMI-A-1/modes");
+            String[] texts = sss.split("\n");
+            return texts;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     //获取屏幕方向	1
     @Override
     public int getDisplayOrientation() {
@@ -152,6 +164,22 @@ public class ZtlManager32887_1 extends ZtlManager {
     public void setScreenMode(String mode) {
         setSystemProperty("persist.sys.screenmode", mode);
         setSystemProperty("ztl.Screen", "Set");
+    }
+
+    //显示-获取HDMI状态
+    @Override
+    public String getHDMIState(){
+        return execRootCmd("cat /sys/class/drm/card0-HDMI-A-1/status");
+    }
+
+    //显示-设置HDMI开关(true:使能/false:不使能)
+    @Override
+    public void setHDMIEnable(boolean enable){
+        if (enable){
+            execRootCmdSilent("echo on > /sys/class/drm/card0-HDMI-A-1/status");
+        }else {
+            execRootCmdSilent("echo off > /sys/class/drm/card0-HDMI-A-1/status");
+        }
     }
 
     Map<String, Integer> gpios = new HashMap<>();

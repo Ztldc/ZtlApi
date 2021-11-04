@@ -203,7 +203,8 @@ public class CpuInfo {
         dt_3128,
         dt_3368,
         dt_A33,
-        dt_A64
+        dt_A64,
+        dt_3568
 
     }
 
@@ -717,6 +718,67 @@ public class CpuInfo {
         }
     }
 
+    class BD3568 extends BaseDev {
+
+        void speedUp() {
+        }
+
+        @Override
+        String getGPUName() {
+            return "Mali-G52";
+        }
+
+        @Override
+        public int getCPUTemp() {
+            String value = getOnelinevalue("/sys/class/thermal/thermal_zone0/temp");
+            if (value != null)
+                return Integer.valueOf(value);
+
+            return -1;
+        }
+
+        @Override
+        int getGPUTemp() {
+            // /sys/bus/platform/drivers/mali-utgard/1c40000.gpu/dvfs/tempctrl
+            //sensor: 2, status: 1, temperature: 43
+//            String value = getOnelinevalue("/sys/bus/platform/drivers/mali-utgard/1c40000.gpu/dvfs/tempctrl");
+//            value = value.substring(value.indexOf("temperature:"));
+//            value = value.replace("temperature: ", "");
+//            value = value.trim();
+//
+//            if (value != null) {
+//                int l = Integer.valueOf(value);
+//                return l;
+//            }
+            return -1;
+        }
+
+        @Override
+        int getGPUMaxFreq() {
+            //480 MHz
+            String value = getOnelinevalue("/sys/bus/platform/drivers/mali/fde60000.gpu/devfreq/fde60000.gpu/max_freq");
+            value = value.replace("MHz", "");
+            value = value.trim();
+
+            if (value != null) {
+                long l = Long.valueOf(value);
+                l *= 1000;
+                return (int) l;
+            }
+            return -1;
+        }
+
+        @Override
+        int getGPUUtilisation() {
+            return -1;
+        }
+
+        @Override
+        int getGPUCurfreq() {
+            return -1;
+        }
+    }
+
     BaseDev curDev = null;
 
     public interface Eventhandler {
@@ -764,6 +826,9 @@ public class CpuInfo {
         } else if (devTypeStr.contains("A64")) {
             devType = DevType.dt_A64;
             curDev = new BDA64();
+        } else if (devTypeStr.contains("3568")){
+            devType = DevType.dt_3568;
+            curDev = new BD3568();
         }
         if (curDev == null) {
             curDev = new BD3288_51();

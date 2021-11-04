@@ -361,4 +361,9 @@ public class ZtlManager31284_4 extends ZtlManager {
             reboot(0);
         }
     }
+
+    //获取CPU可用频率
+    public String[] getCPUFreq() {
+        return null;
+    }
 }

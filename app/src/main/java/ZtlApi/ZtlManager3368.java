@@ -58,36 +58,6 @@ public class ZtlManager3368 extends ZtlManager {
         }
     }
 
-    //获取外部U盘路径
-//    @Override
-//    public String getUsbStoragePath() {
-//        String usbPath = null;
-//        String usbBasePath = "/storage/";
-//
-//        File file = new File(usbBasePath);
-//        try {
-//            if ((file.exists()) && (file.isDirectory())) {
-//                File[] files = file.listFiles();
-//                for (int i = 0; i < files.length; i++) {
-//                    usbPath = files[i].getAbsolutePath();
-//                    LOGD("shx : get file path " + usbPath);
-//                    if (usbPath.contains("udisk")) {
-//                        LOGD("shx : open " + usbPath);
-//                        File usbFile = new File(usbPath);
-//                        if ((usbFile.exists()) && (usbFile.isDirectory())) {
-//                            usbPath = usbFile.getAbsolutePath();
-//                            LOGD("shx : usbPath " + usbPath);
-//                            break;
-//                        }
-//                    }
-//                }
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//        return usbPath;
-//    }
-
     @Override
     public void setDisplayOrientation(int rotation) {
         if (mContext == null) {
@@ -112,12 +82,6 @@ public class ZtlManager3368 extends ZtlManager {
 //        String state = getSystemProperty("persist.sys.ztlOrientation", "0");
 //        return Integer.valueOf(state).intValue();
 //    }
-
-    //获取当前GPIO的值
-    public int Getcurrentgpio(int port) {
-        execRootCmdSilent("cat /sys/class/gpio/gpio" + port + "value");
-        return 1;
-    }
 
     //获取USB调试状态
     @Override

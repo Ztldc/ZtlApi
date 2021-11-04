@@ -1,16 +1,18 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.3"
+    compileSdkVersion 28
+    buildToolsVersion '28.0.3'
 
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 29
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        //javaCompileOptions { annotationProcessorOptions { includeCompileClasspath = true } }
+
+       // testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // 设置支持的SO库架构 解决64位so方法
             abiFilters 'armeabi', 'armeabi-v7a'
@@ -46,7 +48,7 @@ android {
         SDK_DIR = props.get('sdk.dir');
     }
     dependencies {
-        provided files("${SDK_DIR}/platforms/android-21/data/layoutlib.jar")
+        provided files("${SDK_DIR}/platforms/android-22/data/layoutlib.jar")
     }
     //以上是为了找到android.os.SystemProperties这个隐藏的类
 
@@ -68,20 +70,20 @@ android {
 //    }
 
     // 将 .so 文件打包为 Native_Libs.jar 包文件
-    task nativeLibsToJar(type: Zip, description: "create a jar archive of the native libs") {
-        destinationDir file('../prebuild')
-        baseName "Native_Libs2"
-        extension "jar"
-        from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
-        into "lib"
-    }
-    tasks.withType(JavaCompile) {
-        compileTask -> compileTask.dependsOn(nativeLibsToJar)
-    }
-
-    sourceSets.main{
-        jniLibs.srcDirs = ['../prebuild'];
-    }
+//    task nativeLibsToJar(type: Zip, description: "create a jar archive of the native libs") {
+//        destinationDir file('../prebuild')
+//        baseName "Native_Libs2"
+//        extension "jar"
+//        from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
+//        into "lib"
+//    }
+//    tasks.withType(JavaCompile) {
+//        compileTask -> compileTask.dependsOn(nativeLibsToJar)
+//    }
+//
+//    sourceSets.main{
+//        jniLibs.srcDirs = ['../prebuild'];
+//    }
 
 }
 
@@ -104,7 +106,7 @@ task makeJar(type: Jar) {
     //需要合并的jar的路径+名称
     //from(project.zipTree('build/intermediates/compile_library_classes/debug/classes.jar'))
     //from(project.zipTree('build/intermediates/aar_main_jar/release/classes.jar')) //混淆的jar
-    from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
+    //from fileTree(dir: "src/main/jniLibs", include: "**/*.so")
     from(project.zipTree('build/intermediates/aar_main_jar/debug/classes.jar'))
 
     //输出到的位置
