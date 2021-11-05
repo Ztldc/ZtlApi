@@ -85,8 +85,8 @@ import static java.util.Calendar.MINUTE;
 import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
-//20211104 增加设置setAPN和查询hasAPN接口,板好改为6.2
 //这个类是3288_5.1
+//20211104 增加设置setAPN和查询hasAPN接口,板好改为6.2
 //20211030 修复3399USB设置OTG连接状态不能及时更新问题
 //20211029 废弃看门狗接口，添加看门狗-app喂狗，禁止系统喂狗，修改获取U盘路径接口
 //20211023 添加：设置禁止卸载软件接口、获取禁止卸载软件包名
@@ -797,83 +797,66 @@ public class ZtlManager {
 
     }
 
-    /**
-     * echo 1 > /proc/ztl-wdog/wdog   打开看门狗
-     * echo 2 > /proc/ztl-wdog/wdog   喂狗
-     * echo 3 > /proc/ztl-wdog/wdog   关闭看门狗
-     */
+//    private Thread hardware_thread = null;
+//    private Thread set_watchdog_down_thread = null;
+//    private boolean hardware_watchdog_run = true;
 
-    //系统-判断是否支持看门狗功能 true:存在 false：不存在
-    @Deprecated
-    public boolean hasWatchDog() {
-        if (isExist("/proc/ztl-wdog/wdog")) {
-            return true;
-        } else {
-            Log.e(TAG, "系统暂不支持看门狗，如需使用该功能，请联系技术支持");
-            return false;
-        }
-    }
-
-    private Thread hardware_thread = null;
-    private Thread set_watchdog_down_thread = null;
-    private boolean hardware_watchdog_run = true;
-
-    //硬件看门狗喂狗
-    public void feedHardwareWatchDog() {
-
-        if (set_watchdog_down_thread == null) {
-            set_watchdog_down_thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (hardware_watchdog_run) {
-                        try {
-                            Thread.sleep(1000);
-                            setGpioValue("GPIO7_A3", 0);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            });
-            set_watchdog_down_thread.start();
-        }
-
-        if (hardware_thread == null) {
-            hardware_thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (hardware_watchdog_run) {
-                        setGpioValue("GPIO7_A3", 1);
-                        try {
-                            Thread.sleep(20000);
-                        } catch (Exception e) {
-                            Log.e(TAG, "feed wDog err.");
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            });
-        }
-        hardware_thread.start();
-
-    }
-
-    //关闭硬件看门狗
-    public void closeHardwareWatchDog() {
-
-        hardware_watchdog_run = false;
-
-        if (hardware_thread != null) {
-            hardware_thread.interrupt();
-            hardware_thread = null;
-        }
-
-        if (set_watchdog_down_thread != null) {
-            set_watchdog_down_thread.interrupt();
-            set_watchdog_down_thread = null;
-        }
-
-    }
+//    //硬件看门狗喂狗
+//    public void feedHardwareWatchDog() {
+//
+//        if (set_watchdog_down_thread == null) {
+//            set_watchdog_down_thread = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    while (hardware_watchdog_run) {
+//                        try {
+//                            Thread.sleep(1000);
+//                            setGpioValue("GPIO7_A3", 0);
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }
+//            });
+//            set_watchdog_down_thread.start();
+//        }
+//
+//        if (hardware_thread == null) {
+//            hardware_thread = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    while (hardware_watchdog_run) {
+//                        setGpioValue("GPIO7_A3", 1);
+//                        try {
+//                            Thread.sleep(20000);
+//                        } catch (Exception e) {
+//                            Log.e(TAG, "feed wDog err.");
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }
+//            });
+//        }
+//        hardware_thread.start();
+//
+//    }
+//
+//    //关闭硬件看门狗
+//    public void closeHardwareWatchDog() {
+//
+//        hardware_watchdog_run = false;
+//
+//        if (hardware_thread != null) {
+//            hardware_thread.interrupt();
+//            hardware_thread = null;
+//        }
+//
+//        if (set_watchdog_down_thread != null) {
+//            set_watchdog_down_thread.interrupt();
+//            set_watchdog_down_thread = null;
+//        }
+//
+//    }
 
     /**
      * 看门狗-app喂狗，禁止系统喂狗
@@ -897,97 +880,6 @@ public class ZtlManager {
         intent.setComponent(componetName);
         intent.putExtra("cmd", "appWatchDog");
         mContext.startService(intent);
-    }
-
-    //打开看门狗  true:打开成功  false：关闭成功
-    @Deprecated
-    public boolean openWatchDog() {
-        boolean isOpen = false;
-        if (isOpenWatchDog) {
-            Log.e(TAG, "已经打开看门狗，请勿重复打开");
-            return true;
-        } else {
-            if (isExist("/proc/ztl-wdog/wdog")) {
-                Log.e(TAG, "正在使能看门狗");
-                execRootCmdSilent("echo 1 > /proc/ztl-wdog/wdog");
-                isOpen = true;
-                isOpenWatchDog = true;
-                Log.e(TAG, "已打开看门狗，进行喂狗");
-                feedWatchDog();
-            } else {
-                Log.e(TAG, "系统暂不支持看门狗，如需使用该功能，请联系技术支持");
-                return false;
-            }
-        }
-        return isOpen;
-    }
-
-    Thread watchDogThread = null;
-
-    //看门狗喂狗
-    @Deprecated
-    private void feedWatchDog() {
-        if (isOpenWatchDog) {
-            if (watchDogThread == null) {
-                watchDogThread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        //开始喂狗
-                        while (true) {
-                            Log.e(TAG, "开始喂狗");
-                            execRootCmdSilent("echo 2 > /proc/ztl-wdog/wdog");
-                            try {
-                                Thread.sleep(20000);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                                break;
-                            }
-                        }
-                        Log.e(TAG, "喂狗线程已退出");
-                    }
-                });
-                watchDogThread.start();
-            }
-        }
-    }
-
-    //关闭看门狗 true:关闭成功  false：未关闭
-    @Deprecated
-    public boolean closeWatchDog() {
-        if (watchDogThread != null) {
-            watchDogThread.interrupt();
-            watchDogThread = null;
-        }
-
-        //如果不喂狗，关闭看门狗
-        isOpenWatchDog = false;
-        execRootCmdSilent("echo 3 > /proc/ztl-wdog/wdog");
-        return isRunWatchDog();
-    }
-
-    //看门狗是否在运行
-    @Deprecated
-    public boolean isRunWatchDog() {
-        boolean isRun = false;
-        if (ReadFile("/proc/ztl-wdog/wdog").contains("1")
-                || ReadFile("/proc/ztl-wdog/wdog").contains("2")) {
-            isRun = true;
-            return isRun;
-        } else if (ReadFile("/proc/ztl-wdog/wdog").contains("3")) {
-            isRun = false;
-            return isRun;
-        }
-        return isRun;
-    }
-
-    //系统-读取看门狗的值
-    @Deprecated
-    public String watchDogValue() {
-        String watchdogState = ReadFile("/proc/ztl-wdog/wdog");
-        if (watchdogState != null) {
-            return watchdogState;
-        }
-        return watchdogState;
     }
 
     //系统-锁屏
@@ -1709,129 +1601,6 @@ public class ZtlManager {
             installed = false;
         }
         return installed;
-    }
-
-    /***3399 api****/
-    //时间-定时开机-每天
-    //存在一个问题，如果设置好定时开关机，再把系统时间往过去的时间调整，会导致执行不开关机。
-    public void setSchedulePowerOn(int hour, int minute, boolean enableSchedulPowerOn) {
-
-        Calendar c = Calendar.getInstance();
-        int year = c.get(Calendar.YEAR);
-        int month = c.get(Calendar.MONTH);
-        int day = c.get(Calendar.DAY_OF_MONTH);
-        c.set(year, month, day, hour, minute, 0);
-
-        if (isNew()) {
-            c.getTimeInMillis();
-            setSchedulePowerOnAndOff("timingOn", c.getTimeInMillis(), 127, enableSchedulPowerOn);
-        } else {
-            long now = System.currentTimeMillis();
-
-            if (enableSchedulPowerOn == false)
-                c.setTimeInMillis(0);
-
-            _setPowerOn(c.getTimeInMillis() / 1000, true);
-            Log.d("定时开机设置的时间：", "" + c.getTimeInMillis() / 1000);
-        }
-    }
-
-    //时间-定时关机-每天
-    @Deprecated
-    public void setSchedulePowerOff(int hour, int minute, boolean enableSchedulPowerOff) {
-        if (mContext == null) {
-            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
-            return;
-        }
-
-        Calendar c = Calendar.getInstance();
-        long curTime = c.getTimeInMillis();
-
-        c.set(Calendar.HOUR_OF_DAY, hour);
-        c.set(Calendar.MINUTE, minute);
-        c.set(Calendar.SECOND, 0);
-        long targetTime = c.getTimeInMillis();
-        if (targetTime < curTime) {
-            c.add(Calendar.DAY_OF_MONTH, 1);
-            targetTime = c.getTimeInMillis();
-        }
-
-        if (isNew()) {
-            setSchedulePowerOnAndOff("timingOff", targetTime, 127, enableSchedulPowerOff);
-        } else {
-            if (enableSchedulPowerOff == false) {
-                setSystemProperty("persist.sys.powerOffTime", "unknown");
-                setSystemProperty("persist.sys.powerOffEnable", "false");
-                Log.d(TAG, "已禁用定时关机");
-                return;
-            }
-            Intent intent = new Intent("com.android.settings.action.REQUEST_POWER_OFF");
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
-            AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-            am.set(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), pendingIntent);
-            setSystemProperty("persist.sys.powerOffTime", hour + ":" + minute);
-            setSystemProperty("persist.sys.powerOffEnable", "true");
-            setSystemProperty("persist.sys.powerOffEveryday", "true");
-            setSystemProperty("persist.sys.powerOffTimeMillis", targetTime / 1000 + "");
-            Log.i(TAG, "Next time power off " + hour + ":" + minute);
-        }
-    }
-
-    //时间-定时开机-一次性
-    @Deprecated
-    public void setPowerOnAlarm(int year, int month, int day, int hour, int minute, boolean enableSchedulPowerOn) {
-        Calendar cal = Calendar.getInstance();
-        month -= 1;
-        cal.set(year, month, day, hour, minute, 0);
-
-        if (isNew()) {
-            setSchedulePowerOnAndOff("timingOn", cal.getTimeInMillis(), 0, enableSchedulPowerOn);
-        } else {
-            if (enableSchedulPowerOn == false) {
-                cal.setTimeInMillis(0);
-            }
-            _setPowerOn(cal.getTimeInMillis() / 1000, false);
-        }
-        Log.d("一次性定时开机设置的时间：", "" + cal.getTimeInMillis() / 1000);
-    }
-
-    //时间-定时关机-一次性
-    public void setPowerOffAlarm(int year, int month, int day, int hour, int minute, boolean enableSchedulPowerOff) {
-        if (mContext == null) {
-            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
-            return;
-        }
-        Calendar c = Calendar.getInstance();
-        long curTime = c.getTimeInMillis() / 1000;
-
-        month = month - 1;
-        c.set(year, month, day, hour, minute, 0);
-        long targetTime = c.getTimeInMillis() / 1000;
-
-        if (isNew()) {
-            setSchedulePowerOnAndOff("timingOff", c.getTimeInMillis(), 0, enableSchedulPowerOff);
-        } else {
-            if (enableSchedulPowerOff == false) {
-                setSystemProperty("persist.sys.powerOffTime", "unknown");
-                setSystemProperty("persist.sys.powerOffEnable", "false");
-                Log.d(TAG, "已禁用定时关机");
-                return;
-            }
-            if (targetTime < curTime) {
-                Log.d(TAG, "set false tar " + targetTime + " cur" + curTime);
-                setSystemProperty("persist.sys.powerOffEnable", "false");
-                return;
-            }
-            Intent intent = new Intent("com.android.settings.action.REQUEST_POWER_OFF");
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
-            AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-            am.set(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), pendingIntent);
-            setSystemProperty("persist.sys.powerOffTime", hour + ":" + minute);
-            setSystemProperty("persist.sys.powerOffEnable", "true");
-            setSystemProperty("persist.sys.powerOffEveryday", "false");
-            setSystemProperty("persist.sys.powerOffTimeMillis", targetTime + "");
-        }
-        Log.d(TAG, "set next time power off " + year + "/" + (month + 1) + "/" + day + " " + hour + ":" + minute);
     }
 
     //时间-定时关机-每天 助手实现
@@ -3044,6 +2813,50 @@ public class ZtlManager {
         return operator;
     }
 
+
+    /**
+     * 网络-查询apn是否存在，null表示没有初始化API或系统没有这接口,“-1”，不存在，其他已存在
+     */
+    public String hasAPN(String apn) {
+
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return null;
+        }
+
+
+        try {
+            ContentResolver contentProvider = mContext.getContentResolver();
+
+            return contentProvider.getType(
+                    Uri.parse("content://com.ztl.helper.ZtlApi/ztlapn_" +apn));
+
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
+        return null;//要更新助手
+
+    }
+    /**
+     * 网络-设置apn，注意：设置前应使用hasAPN接口查询系统是否支持这个接口和是否已存在此APN
+     */
+    public  void setAPN(String apn) {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",
+                "com.ztl.helper.ZTLHelperService");
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "apn");
+        intent.putExtra("name", "cnmet");
+        mContext.startService(intent);
+
+    }
+
     //文件-写入文件方法
     final void writeMethod(String file, String conent) {
         BufferedWriter out = null;
@@ -3978,48 +3791,237 @@ public class ZtlManager {
         }
     }
 
-
     /**
-     * 查询apn是否存在，null表示没有初始化API或系统没有这接口,“-1”，不存在，其他已存在
+     * echo 1 > /proc/ztl-wdog/wdog   打开看门狗
+     * echo 2 > /proc/ztl-wdog/wdog   喂狗
+     * echo 3 > /proc/ztl-wdog/wdog   关闭看门狗
      */
-    public String hasAPN(String apn) {
 
-        if (mContext == null) {
-            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
-            return null;
+    //系统-判断是否支持看门狗功能 true:存在 false：不存在
+    @Deprecated
+    public boolean hasWatchDog() {
+        if (isExist("/proc/ztl-wdog/wdog")) {
+            return true;
+        } else {
+            Log.e(TAG, "系统暂不支持看门狗，如需使用该功能，请联系技术支持");
+            return false;
         }
-
-
-        try {
-            ContentResolver contentProvider = mContext.getContentResolver();
-
-            return contentProvider.getType(
-                    Uri.parse("content://com.ztl.helper.ZtlApi/ztlapn_" +apn));
-
-        } catch (Exception e) {
-            // TODO: handle exception
-        }
-        return null;//要更新助手
-
     }
-    /**
-     * 设置apn，注意：设置前应使用hasAPN接口查询系统是否支持这个接口和是否已存在此APN
-     */
-    public  void setAPN(String apn) {
+
+    //打开看门狗  true:打开成功  false：关闭成功
+    @Deprecated
+    public boolean openWatchDog() {
+        boolean isOpen = false;
+        if (isOpenWatchDog) {
+            Log.e(TAG, "已经打开看门狗，请勿重复打开");
+            return true;
+        } else {
+            if (isExist("/proc/ztl-wdog/wdog")) {
+                Log.e(TAG, "正在使能看门狗");
+                execRootCmdSilent("echo 1 > /proc/ztl-wdog/wdog");
+                isOpen = true;
+                isOpenWatchDog = true;
+                Log.e(TAG, "已打开看门狗，进行喂狗");
+                feedWatchDog();
+            } else {
+                Log.e(TAG, "系统暂不支持看门狗，如需使用该功能，请联系技术支持");
+                return false;
+            }
+        }
+        return isOpen;
+    }
+
+    Thread watchDogThread = null;
+
+    //看门狗喂狗
+    @Deprecated
+    private void feedWatchDog() {
+        if (isOpenWatchDog) {
+            if (watchDogThread == null) {
+                watchDogThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        //开始喂狗
+                        while (true) {
+                            Log.e(TAG, "开始喂狗");
+                            execRootCmdSilent("echo 2 > /proc/ztl-wdog/wdog");
+                            try {
+                                Thread.sleep(20000);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                                break;
+                            }
+                        }
+                        Log.e(TAG, "喂狗线程已退出");
+                    }
+                });
+                watchDogThread.start();
+            }
+        }
+    }
+
+    //关闭看门狗 true:关闭成功  false：未关闭
+    @Deprecated
+    public boolean closeWatchDog() {
+        if (watchDogThread != null) {
+            watchDogThread.interrupt();
+            watchDogThread = null;
+        }
+
+        //如果不喂狗，关闭看门狗
+        isOpenWatchDog = false;
+        execRootCmdSilent("echo 3 > /proc/ztl-wdog/wdog");
+        return isRunWatchDog();
+    }
+
+    //看门狗是否在运行
+    @Deprecated
+    public boolean isRunWatchDog() {
+        boolean isRun = false;
+        if (ReadFile("/proc/ztl-wdog/wdog").contains("1")
+                || ReadFile("/proc/ztl-wdog/wdog").contains("2")) {
+            isRun = true;
+            return isRun;
+        } else if (ReadFile("/proc/ztl-wdog/wdog").contains("3")) {
+            isRun = false;
+            return isRun;
+        }
+        return isRun;
+    }
+
+    //系统-读取看门狗的值
+    @Deprecated
+    public String watchDogValue() {
+        String watchdogState = ReadFile("/proc/ztl-wdog/wdog");
+        if (watchdogState != null) {
+            return watchdogState;
+        }
+        return watchdogState;
+    }
+
+    /***3399 api****/
+    //时间-定时开机-每天
+    //存在一个问题，如果设置好定时开关机，再把系统时间往过去的时间调整，会导致执行不开关机。
+    @Deprecated
+    public void setSchedulePowerOn(int hour, int minute, boolean enableSchedulPowerOn) {
+
+        Calendar c = Calendar.getInstance();
+        int year = c.get(Calendar.YEAR);
+        int month = c.get(Calendar.MONTH);
+        int day = c.get(Calendar.DAY_OF_MONTH);
+        c.set(year, month, day, hour, minute, 0);
+
+        if (isNew()) {
+            c.getTimeInMillis();
+            setSchedulePowerOnAndOff("timingOn", c.getTimeInMillis(), 127, enableSchedulPowerOn);
+        } else {
+            long now = System.currentTimeMillis();
+
+            if (enableSchedulPowerOn == false)
+                c.setTimeInMillis(0);
+
+            _setPowerOn(c.getTimeInMillis() / 1000, true);
+            Log.d("定时开机设置的时间：", "" + c.getTimeInMillis() / 1000);
+        }
+    }
+
+    //时间-定时关机-每天
+    @Deprecated
+    public void setSchedulePowerOff(int hour, int minute, boolean enableSchedulPowerOff) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
         }
-        ComponentName componetName = new ComponentName(
-                "com.ztl.helper",
-                "com.ztl.helper.ZTLHelperService");
 
-        Intent intent = new Intent();
-        intent.setComponent(componetName);
-        intent.putExtra("cmd", "apn");
-        intent.putExtra("name", "cnmet");
-        mContext.startService(intent);
+        Calendar c = Calendar.getInstance();
+        long curTime = c.getTimeInMillis();
 
+        c.set(Calendar.HOUR_OF_DAY, hour);
+        c.set(Calendar.MINUTE, minute);
+        c.set(Calendar.SECOND, 0);
+        long targetTime = c.getTimeInMillis();
+        if (targetTime < curTime) {
+            c.add(Calendar.DAY_OF_MONTH, 1);
+            targetTime = c.getTimeInMillis();
+        }
+
+        if (isNew()) {
+            setSchedulePowerOnAndOff("timingOff", targetTime, 127, enableSchedulPowerOff);
+        } else {
+            if (enableSchedulPowerOff == false) {
+                setSystemProperty("persist.sys.powerOffTime", "unknown");
+                setSystemProperty("persist.sys.powerOffEnable", "false");
+                Log.d(TAG, "已禁用定时关机");
+                return;
+            }
+            Intent intent = new Intent("com.android.settings.action.REQUEST_POWER_OFF");
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+            AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+            am.set(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), pendingIntent);
+            setSystemProperty("persist.sys.powerOffTime", hour + ":" + minute);
+            setSystemProperty("persist.sys.powerOffEnable", "true");
+            setSystemProperty("persist.sys.powerOffEveryday", "true");
+            setSystemProperty("persist.sys.powerOffTimeMillis", targetTime / 1000 + "");
+            Log.i(TAG, "Next time power off " + hour + ":" + minute);
+        }
+    }
+
+    //时间-定时开机-一次性
+    @Deprecated
+    public void setPowerOnAlarm(int year, int month, int day, int hour, int minute, boolean enableSchedulPowerOn) {
+        Calendar cal = Calendar.getInstance();
+        month -= 1;
+        cal.set(year, month, day, hour, minute, 0);
+
+        if (isNew()) {
+            setSchedulePowerOnAndOff("timingOn", cal.getTimeInMillis(), 0, enableSchedulPowerOn);
+        } else {
+            if (enableSchedulPowerOn == false) {
+                cal.setTimeInMillis(0);
+            }
+            _setPowerOn(cal.getTimeInMillis() / 1000, false);
+        }
+        Log.d("一次性定时开机设置的时间：", "" + cal.getTimeInMillis() / 1000);
+    }
+
+    //时间-定时关机-一次性
+    @Deprecated
+    public void setPowerOffAlarm(int year, int month, int day, int hour, int minute, boolean enableSchedulPowerOff) {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+        Calendar c = Calendar.getInstance();
+        long curTime = c.getTimeInMillis() / 1000;
+
+        month = month - 1;
+        c.set(year, month, day, hour, minute, 0);
+        long targetTime = c.getTimeInMillis() / 1000;
+
+        if (isNew()) {
+            setSchedulePowerOnAndOff("timingOff", c.getTimeInMillis(), 0, enableSchedulPowerOff);
+        } else {
+            if (enableSchedulPowerOff == false) {
+                setSystemProperty("persist.sys.powerOffTime", "unknown");
+                setSystemProperty("persist.sys.powerOffEnable", "false");
+                Log.d(TAG, "已禁用定时关机");
+                return;
+            }
+            if (targetTime < curTime) {
+                Log.d(TAG, "set false tar " + targetTime + " cur" + curTime);
+                setSystemProperty("persist.sys.powerOffEnable", "false");
+                return;
+            }
+            Intent intent = new Intent("com.android.settings.action.REQUEST_POWER_OFF");
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+            AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+            am.set(AlarmManager.RTC_WAKEUP, c.getTimeInMillis(), pendingIntent);
+            setSystemProperty("persist.sys.powerOffTime", hour + ":" + minute);
+            setSystemProperty("persist.sys.powerOffEnable", "true");
+            setSystemProperty("persist.sys.powerOffEveryday", "false");
+            setSystemProperty("persist.sys.powerOffTimeMillis", targetTime + "");
+        }
+        Log.d(TAG, "set next time power off " + year + "/" + (month + 1) + "/" + day + " " + hour + ":" + minute);
     }
 
 }
