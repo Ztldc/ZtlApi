@@ -86,6 +86,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1
+//20211110 修改API设置apn值没有传对问题
 //20211104 增加设置setAPN和查询hasAPN接口,板好改为6.2
 //20211030 修复3399USB设置OTG连接状态不能及时更新问题
 //20211029 废弃看门狗接口，添加看门狗-app喂狗，禁止系统喂狗，修改获取U盘路径接口
@@ -222,7 +223,7 @@ public class ZtlManager {
                 Instance = new ZtlManagerA33_A64();
             } else if (devType.contains("A40")) {
                 Instance = new ZtlManagerA40i();
-            } else if (devType.contains("u202")) {
+            } else if (devType.contains("u202")||devType.contains("w400")) {
                 Instance = new ZtlManagerU202();
             } else if (devType.contains("3568")) {
                 Instance = new ZtlManager3568();
@@ -880,6 +881,77 @@ public class ZtlManager {
         intent.setComponent(componetName);
         intent.putExtra("cmd", "appWatchDog");
         mContext.startService(intent);
+    }
+
+    /**
+     * 查询系统是否打开USB触摸主副屏交换
+     *  @return
+     * -1：系统不支持此功能
+     * 0：关闭
+     * 1：打开
+     */
+    public int isSwapTouch(){
+        int flag = -1;
+        try {
+            String pref_usb_main_str = ZtlManager.GetInstance().getSystemProperty("persist.ztl.swap_touch","");
+            if (pref_usb_main_str == null || pref_usb_main_str.equals("")){
+
+            }else {
+
+                if (pref_usb_main_str.trim().equals("true")){
+                    flag = 1;
+                }else {
+                    flag = 0;
+                }
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("isSwapTouch error");
+        }
+        return flag;
+    }
+
+    /**
+     *设置USB触摸主副屏交换
+     * @param isSwap 是否打开
+     * @return
+     * false:设置失败
+     * true:设置成功
+     */
+    public boolean setSwapTouch(boolean isSwap,boolean restartNow){
+        boolean flag =false;
+
+        try {
+            String pref_usb_main_str = ZtlManager.GetInstance().getSystemProperty("persist.ztl.swap_touch","");
+            if (pref_usb_main_str == null || pref_usb_main_str.equals("")){
+                System.out.println("usb SwapTouch not");
+            }else {
+
+                ZtlManager.GetInstance().setSystemProperty("persist.ztl.swap_touch",isSwap+"");
+
+                if (isSwapTouch()==1 && isSwap){
+                    flag = true;
+                }else if(isSwapTouch()==0 && !isSwap){
+                    flag = true;
+                }
+
+                if (flag){
+                    if (restartNow){
+                        reboot(0);
+                    }
+
+                }
+
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("setSwapTouch error");
+        }
+
+
+        return flag;
     }
 
     //系统-锁屏
@@ -2852,7 +2924,7 @@ public class ZtlManager {
         Intent intent = new Intent();
         intent.setComponent(componetName);
         intent.putExtra("cmd", "apn");
-        intent.putExtra("name", "cnmet");
+        intent.putExtra("name", apn);
         mContext.startService(intent);
 
     }
