@@ -86,6 +86,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1
+//20211111 修改U2O2 API设置多屏幕旋转没有重启问题
 //20211110 修改API设置apn值没有传对问题
 //20211104 增加设置setAPN和查询hasAPN接口,板好改为6.2
 //20211030 修复3399USB设置OTG连接状态不能及时更新问题

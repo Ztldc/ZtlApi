@@ -461,12 +461,16 @@ public class ZtlManagerU202 extends ZtlManager {
     public int setDisplayOrientation(int screen, int rotation) {
         if (screen == 0) {
             setPrimaryDisplayOrientation(rotation);
+            reboot(1);
         } else if (screen == 1) {
             setExtendDisplayOrientation(rotation);
+            reboot(1);
         } else if (screen == -1) {
             setPrimaryDisplayOrientation(rotation);
             setExtendDisplayOrientation(rotation);
+            reboot(1);
         }
+
         return 0;
     }
 
