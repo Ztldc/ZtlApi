@@ -93,14 +93,22 @@ public class ZtlManager31284_4 extends ZtlManager {
         String usbPath = null;
 
         try{
-            File file = new File("/mnt/usb_storage/USB_DISK1/udisk0/");
-            // 多个节点的时候
-            // /mnt/usb_storage/USB_DISK1/udisk0/
-            // /mnt/usb_storage/USB_DISK1/udiskxxxx/
-            //usbPath = getSystemProperty("persist.sys.usbDisk","unKnown");
-            if(file.exists()){
-                usbPath = "/mnt/usb_storage/USB_DISK1/udisk0/";
+            for (int i = 0; i < 100; i++) {
+                File file = new File("/mnt/usb_storage/USB_DISK1/udisk" +
+                        i +
+                        "/");
+                // 多个节点的时候
+                // /mnt/usb_storage/USB_DISK1/udisk0/
+                // /mnt/usb_storage/USB_DISK1/udiskxxxx/
+                //usbPath = getSystemProperty("persist.sys.usbDisk","unKnown");
+                if(file.exists()){
+                    usbPath = "/mnt/usb_storage/USB_DISK1/udisk" +
+                            i +
+                            "/";
+                    break;
+                }
             }
+
         }catch (Exception e) {
             e.printStackTrace();
             return null;
