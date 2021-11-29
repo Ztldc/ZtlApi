@@ -248,7 +248,9 @@ public class ZtlManager33287_1 extends ZtlManager {
     //获取屏幕方向	1
     @Override
     public int getDisplayOrientation() {
+
         String state = getSystemProperty("persist.sys.ztlOrientation", "0");
+
         return Integer.valueOf(state).intValue();
     }
 

@@ -86,6 +86,8 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1
+//20211129 API修改4.4 获取有些U盘路径不对问题
+//20211126 API修改3399pro打开OTG的方法,系统开机默认打开
 //20211111 修改U2O2 API设置多屏幕旋转没有重启问题
 //20211110 修改API设置apn值没有传对问题
 //20211104 增加设置setAPN和查询hasAPN接口,板好改为6.2
@@ -449,7 +451,7 @@ public class ZtlManager {
                         } else {
                             File usbFile = new File(absPath);
                             if (usbFile.exists() && usbFile.isDirectory()) {
-                                if (getAndroidVersion().contains("5.1")) {
+                                if (getAndroidVersion().contains("5.1")||getAndroidVersion().contains("4.4")) {
                                     File[] usbFiles = usbFile.listFiles();
                                     usbPath = usbFiles[i].getPath();
                                     Files1.add(usbPath);
@@ -1026,9 +1028,11 @@ public class ZtlManager {
         String result = "";
         DataOutputStream dos = null;
         DataInputStream dis = null;
+        DataInputStream errorIs = null;
         Process p = Runtime.getRuntime().exec(su);// 经过Root处理的android系统即有su命令
         dos = new DataOutputStream(p.getOutputStream());
         dis = new DataInputStream(p.getInputStream());
+        errorIs = new DataInputStream(p.getErrorStream());
 
         dos.writeBytes(cmd + "\n");
         dos.flush();
@@ -1046,6 +1050,18 @@ public class ZtlManager {
         while ((line = br.readLine()) != null) {
             result += line;
             result += "\n";
+        }
+
+        try {
+            if(result==null||result.equals("")){
+                br = new BufferedReader(new InputStreamReader(errorIs));
+                while ((line = br.readLine()) != null) {
+                    result += line;
+                    result += "\n";
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         p.waitFor();
         dos.close();
@@ -3194,6 +3210,14 @@ public class ZtlManager {
             Log.e(TAG, "传入参数错误,请传入GPIO7_A5之类的，实际以规格书为准");
             return;
         }
+        Gpio gpio = new Gpio();
+        if (gpio.open(port) == false) {
+            return;
+        }
+        gpio.setValue("out", value);
+    }
+
+    public void setGpioValue(int port, int value) {
         Gpio gpio = new Gpio();
         if (gpio.open(port) == false) {
             return;

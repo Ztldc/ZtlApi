@@ -72,6 +72,22 @@ public class Gpio {
         this.isGpioPortPrepared = prepare_gpio_port(this.mPort);
         return isGpioPortPrepared;
     }
+    //直接输入GPIO7_A5 之类 省得每次都按计算器
+    public boolean open(int strPort) {
+
+        gpio_name = strPort+"";
+
+        //71 51兼容
+        int nValue = strPort;
+        if (nValue == -1) {
+            return false;
+        }
+        this.mPort = nValue;
+        this.mGpioExport = new File(this.gpio_export);
+        this.mGpioUnExport = new File(this.gpio_unexport);
+        this.isGpioPortPrepared = prepare_gpio_port(this.mPort);
+        return isGpioPortPrepared;
+    }
 
     //获取当前GPIO的Direction
     public String getDirection() {

@@ -175,25 +175,38 @@ public class ZtlManager3399Pro extends ZtlManagerU202 {
     @Override
     public void setUSBtoPC(boolean toPC) {
         if (toPC) {
-            execRootCmdSilent("echo otg > /sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode");
+            setSystemProperty("persist.usb.mode", "2");
+            execRootCmdSilent("echo 2 > /sys/devices/platform/usb0/dwc3_mode");
         } else {
-            execRootCmdSilent("echo host > /sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode");
+            setSystemProperty("persist.usb.mode", "1");
+            execRootCmdSilent("echo 1 > /sys/devices/platform/usb0/dwc3_mode");
         }
+//        if (toPC) {
+//            execRootCmdSilent("echo otg > /sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode");
+//        } else {
+//            execRootCmdSilent("echo host > /sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode");
+//        }
     }
 
     //系统-获取OTG口连接状态 //勾中的时候是2 不勾的时候是1
     @Override
     public boolean getUSBtoPC() {
-        try {
-            String state = loadFileAsString("/sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode");
-            if (state.contains("otg")) {
+
+            String state = getSystemProperty("persist.usb.mode", "");
+            if (state.equals("2")) {
                 return true;
-            }else {
-                return false;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
+//        try {
+//            String state = loadFileAsString("/sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode");
+//            if (state.contains("otg")) {
+//                return true;
+//            }else {
+//                return false;
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         return false;
     }
 }
