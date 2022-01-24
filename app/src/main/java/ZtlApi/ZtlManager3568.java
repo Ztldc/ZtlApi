@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ZtlManager3568 extends ZtlManager {
@@ -111,12 +112,93 @@ public class ZtlManager3568 extends ZtlManager {
 		
     }
 
+    //获取U盘列表
+    public List<String> getUSBDisks() {
+        String usbPath = null;
+        String usbBasePath = "";
+
+        if (getAndroidVersion().contains("5.1.1") || getAndroidVersion().contains("4.4")) {
+            usbBasePath = "/mnt/usb_storage/";
+        } else {
+            usbBasePath = "/storage/";
+        }
+
+        List<String> Files1 = new ArrayList<>();
+        File file = new File(usbBasePath);
+        try {
+            if (file.exists() && file.isDirectory()) { //open usb_storage
+                File[] files = file.listFiles();
+
+                if (files == null&& android.os.Build.VERSION.SDK_INT >28){
+                    String ddd[] = ZtlManager.GetInstance().execRootCmd("ls /storage/").split("\n");
+
+                    for (int i = 0; i < ddd.length; i++) {
+//                        System.out.println(i+"U盘AP路径222:" + ddd[i]);
+
+                        String absPath = "/storage/"+ddd[i];
+                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")
+                                || absPath.equals(getAppRootOfSdCardRemovable())) {
+                            continue;
+                        } else {
+                            File usbFile = new File(absPath);
+                            if (usbFile.exists() && usbFile.isDirectory()) {
+                                if (getAndroidVersion().contains("5.1")||getAndroidVersion().contains("4.4")) {
+                                    File[] usbFiles = usbFile.listFiles();
+                                    usbPath = usbFiles[i].getPath();
+                                    Files1.add(usbPath);
+                                } else {
+                                    Files1.add(absPath);
+                                }
+                            }
+                        }
+
+                    }
+
+                    //todo 有bug 插入两个U盘的时候返回一个
+                    for (int i = 0; i < Files1.size(); i++) {
+                        Files1 = Collections.singletonList(Files1.get(i));    //udisk0
+                        break;
+                    }
+
+                }else if (files.length > 0) {
+                    for (int i = 0; i < files.length; i++) {
+                        String absPath = files[i].getAbsolutePath();
+                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")
+                                || absPath.equals(getAppRootOfSdCardRemovable())) {
+                            continue;
+                        } else {
+                            File usbFile = new File(absPath);
+                            if (usbFile.exists() && usbFile.isDirectory()) {
+                                if (getAndroidVersion().contains("5.1")||getAndroidVersion().contains("4.4")) {
+                                    File[] usbFiles = usbFile.listFiles();
+                                    usbPath = usbFiles[i].getPath();
+                                    Files1.add(usbPath);
+                                } else {
+                                    Files1.add(absPath);
+                                }
+                            }
+                        }
+                    }
+                    //todo 有bug 插入两个U盘的时候返回一个
+                    for (int i = 0; i < Files1.size(); i++) {
+                        Files1 = Collections.singletonList(Files1.get(i));    //udisk0
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Files1;
+    }
+
     //系统-获取OTG口连接状态 //勾中的时候是2 不勾的时候是1
     @Override
     public boolean getUSBtoPC() {
         try {
             String state = loadFileAsString("/sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
-            if (state.equals("otg")) {// 
+            System.out.println("3568 to PC:"+state);
+            if (state.contains("otg")) {//
                 return true;
             }
         } catch (IOException e) {

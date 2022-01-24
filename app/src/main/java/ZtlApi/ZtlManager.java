@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Date;
 
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
@@ -86,6 +87,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1
+//20220124 API增加设置以太网IP，setEthIP，增加网卡名字
 //20211129 API修改4.4 获取有些U盘路径不对问题
 //20211126 API修改3399pro打开OTG的方法,系统开机默认打开
 //20211111 修改U2O2 API设置多屏幕旋转没有重启问题
@@ -226,9 +228,9 @@ public class ZtlManager {
                 Instance = new ZtlManagerA33_A64();
             } else if (devType.contains("A40")) {
                 Instance = new ZtlManagerA40i();
-            } else if (devType.contains("u202")||devType.contains("w400")) {
+            } else if (devType.contains("u202") || devType.contains("w400")) {
                 Instance = new ZtlManagerU202();
-            } else if (devType.contains("3568")) {
+            } else if (devType.contains("3568") || devType.contains("3566")) {
                 Instance = new ZtlManager3568();
             } else if (devType.contains("kt11")) {
                 Instance = new ZtlManagerkt11_32();
@@ -361,7 +363,7 @@ public class ZtlManager {
     }
 
     //系统-储存-获取外部SD卡路径
-    private String getAppRootOfSdCardRemovable() {
+    String getAppRootOfSdCardRemovable() {
         if (ZtlManager.GetInstance().getAndroidVersion().contains("5.1")) {
             File file = new File("/mnt/external_sd");
             //获取该目录下的所有文件
@@ -451,7 +453,7 @@ public class ZtlManager {
                         } else {
                             File usbFile = new File(absPath);
                             if (usbFile.exists() && usbFile.isDirectory()) {
-                                if (getAndroidVersion().contains("5.1")||getAndroidVersion().contains("4.4")) {
+                                if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
                                     File[] usbFiles = usbFile.listFiles();
                                     usbPath = usbFiles[i].getPath();
                                     Files1.add(usbPath);
@@ -888,22 +890,22 @@ public class ZtlManager {
 
     /**
      * 查询系统是否打开USB触摸主副屏交换
-     *  @return
-     * -1：系统不支持此功能
+     *
+     * @return -1：系统不支持此功能
      * 0：关闭
      * 1：打开
      */
-    public int isSwapTouch(){
+    public int isSwapTouch() {
         int flag = -1;
         try {
-            String pref_usb_main_str = ZtlManager.GetInstance().getSystemProperty("persist.ztl.swap_touch","");
-            if (pref_usb_main_str == null || pref_usb_main_str.equals("")){
+            String pref_usb_main_str = ZtlManager.GetInstance().getSystemProperty("persist.ztl.swap_touch", "");
+            if (pref_usb_main_str == null || pref_usb_main_str.equals("")) {
 
-            }else {
+            } else {
 
-                if (pref_usb_main_str.trim().equals("true")){
+                if (pref_usb_main_str.trim().equals("true")) {
                     flag = 1;
-                }else {
+                } else {
                     flag = 0;
                 }
 
@@ -916,31 +918,31 @@ public class ZtlManager {
     }
 
     /**
-     *设置USB触摸主副屏交换
+     * 设置USB触摸主副屏交换
+     *
      * @param isSwap 是否打开
-     * @return
-     * false:设置失败
+     * @return false:设置失败
      * true:设置成功
      */
-    public boolean setSwapTouch(boolean isSwap,boolean restartNow){
-        boolean flag =false;
+    public boolean setSwapTouch(boolean isSwap, boolean restartNow) {
+        boolean flag = false;
 
         try {
-            String pref_usb_main_str = ZtlManager.GetInstance().getSystemProperty("persist.ztl.swap_touch","");
-            if (pref_usb_main_str == null || pref_usb_main_str.equals("")){
+            String pref_usb_main_str = ZtlManager.GetInstance().getSystemProperty("persist.ztl.swap_touch", "");
+            if (pref_usb_main_str == null || pref_usb_main_str.equals("")) {
                 System.out.println("usb SwapTouch not");
-            }else {
+            } else {
 
-                ZtlManager.GetInstance().setSystemProperty("persist.ztl.swap_touch",isSwap+"");
+                ZtlManager.GetInstance().setSystemProperty("persist.ztl.swap_touch", isSwap + "");
 
-                if (isSwapTouch()==1 && isSwap){
+                if (isSwapTouch() == 1 && isSwap) {
                     flag = true;
-                }else if(isSwapTouch()==0 && !isSwap){
+                } else if (isSwapTouch() == 0 && !isSwap) {
                     flag = true;
                 }
 
-                if (flag){
-                    if (restartNow){
+                if (flag) {
+                    if (restartNow) {
                         reboot(0);
                     }
 
@@ -1053,7 +1055,7 @@ public class ZtlManager {
         }
 
         try {
-            if(result==null||result.equals("")){
+            if (result == null || result.equals("")) {
                 br = new BufferedReader(new InputStreamReader(errorIs));
                 while ((line = br.readLine()) != null) {
                     result += line;
@@ -1213,6 +1215,25 @@ public class ZtlManager {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
         }
+//
+//        System.out.println("包名："+mContext.getPackageName());
+//        try {
+//
+//            PackageManager packageManager = mContext.getPackageManager();
+//
+//            PackageInfo packageInfo = packageManager.getPackageInfo(
+//
+//                    mContext.getPackageName(), 0);
+//
+//            System.out.println("版本："+ packageInfo.versionName);f
+//
+//        } catch (Exception e) {
+//
+//            e.printStackTrace();
+//            System.out.println("版本：error");
+//
+//        }
+
 
         ComponentName componetName = new ComponentName(
                 "com.ztl.helper",  //这个参数是另外一个app的包名
@@ -2331,10 +2352,12 @@ public class ZtlManager {
 
     }
 
-    //显示-设置分辨率		1
+    //显示-设置分辨率
+    // 1
     public void setScreenMode(String mode) {
         int index = 5;
         String cmd = "lcdparamservice ";
+        //lcdparamservice 1 /path
 
         boolean splitScreenLeftRightEnable = false;
         boolean splitScreenUpDownEnable = false;
@@ -2431,6 +2454,134 @@ public class ZtlManager {
             LOGD("mode is null , please check it");
         }
     }
+
+    public int setDisplayResolution(String resolution) {
+
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return -1;
+        }
+
+        try {
+//            先判断下面那个文件存在 存在就用哪个
+// /system/bin/lcdparamservice
+///system/bin/ztlparamservice
+///system/bin/lcdparamservice   1 path
+
+            //判断屏参是否存在
+            resolution = resolution + ".cfg";
+            if (new File("/ztloem/etc/lcd/" + resolution).exists()) {
+                resolution = "/ztloem/etc/lcd/" + resolution;
+            } else if (new File("/system/etc/lcd/" + resolution).exists()) {
+                resolution = "/system/etc/lcd/" + resolution;
+            } else {
+                return -1;
+            }
+
+            //判断命令是否存在
+            if (new File("/system/bin/ztlparamservice").exists()) {
+
+                execRootCmd("/system/bin/ztlparamservice 1 " + resolution);
+                //  setSystemProperty("persist.sys.screenmode", resolution.replace(".cfg",""));
+            } else if (new File("/system/bin/lcdparamservice").exists()) {
+                execRootCmd("/system/bin/lcdparamservice 1 " + resolution);
+                // setSystemProperty("persist.sys.screenmode", resolution.replace(".cfg",""));
+            } else {
+                return -1;
+            }
+
+
+        } catch (Exception e) {
+            return -1;
+        }
+
+        return 0;
+
+    }
+
+    public ArrayList<String> getDisplayResolutionList() {
+
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return null;
+        }
+
+//        /ztloem/etc/lcd/type_1920x1080.cfg
+        ArrayList<String> listResolution = new ArrayList<>();
+//            /system/etc/lcd/
+//            /ztloem/etc/lcd/
+        try {
+
+            File fileList[] = new File("/ztloem/etc/lcd/").listFiles();
+
+            for (int i = 0; i < fileList.length; i++) {
+                try {
+                    String fileNmae = fileList[i].getName();
+                    if (fileNmae.endsWith(".cfg")) {
+                        listResolution.add(fileNmae.replace(".cfg", ""));
+                    }
+                } catch (Exception e) {
+
+                }
+            }
+
+        } catch (Exception e) {
+
+        }
+
+        if (listResolution.size() <= 0) {
+            try {
+
+                File fileList[] = new File("/system/etc/lcd/").listFiles();
+
+                for (int i = 0; i < fileList.length; i++) {
+                    try {
+                        String fileNmae = fileList[i].getName();
+                        if (fileNmae.endsWith(".cfg")) {
+                            listResolution.add(fileNmae.replace(".cfg", ""));
+                        }
+                    } catch (Exception e) {
+
+                    }
+                }
+
+            } catch (Exception e) {
+
+            }
+        }
+
+
+        return listResolution;
+    }
+
+    public String getDisplayResolution() {
+
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return null;
+        }
+
+        String dd = execRootCmd("wm size");
+
+        String size = null;
+
+
+        try {
+            String xx[] = dd.split("\n");
+            dd = xx[0].trim().substring(xx[0].trim().lastIndexOf(" "));
+//            System.out.println("lock dd1:"+dd);
+
+            int w = Integer.parseInt(dd.split("x")[0].trim());
+            int h = Integer.parseInt(dd.split("x")[1].trim());
+
+            size = w + "x" + h;
+        } catch (Exception e) {
+
+        }
+
+        return size;
+    }
+
 
     //显示-设置字体大小 0:最小 1：正常 2：较大 3：最大
     public void setFontSize(int index) {
@@ -2727,6 +2878,28 @@ public class ZtlManager {
         intent.putExtra("dns2", dns2);
         mContext.startService(intent);
     }
+    //多网口需要网口名字：如 eth0,eth1
+    public void setEthIP(boolean bStatic, String name ,String ip, String mask, String gate, String dns, String dns2) {
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
+            return;
+        }
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "set_ethip");
+        intent.putExtra("staitc", bStatic);
+        intent.putExtra("name", name);
+        intent.putExtra("ip", ip);
+        intent.putExtra("mask", mask);
+        intent.putExtra("gate", gate);
+        intent.putExtra("dns", dns);
+        intent.putExtra("dns2", dns2);
+        mContext.startService(intent);
+    }
 
     //网络-设置WIFI IP.第三个参数传入false 即为DHCP(动态获取) 一般使用这个接口第三个参数都是传入true
     public void setWifiIP(String ssid, String psw, boolean bStatic, String ip, String mask, String gate, String dns, String dns2) {
@@ -2918,7 +3091,7 @@ public class ZtlManager {
             ContentResolver contentProvider = mContext.getContentResolver();
 
             return contentProvider.getType(
-                    Uri.parse("content://com.ztl.helper.ZtlApi/ztlapn_" +apn));
+                    Uri.parse("content://com.ztl.helper.ZtlApi/ztlapn_" + apn));
 
         } catch (Exception e) {
             // TODO: handle exception
@@ -2926,10 +3099,11 @@ public class ZtlManager {
         return null;//要更新助手
 
     }
+
     /**
      * 网络-设置apn，注意：设置前应使用hasAPN接口查询系统是否支持这个接口和是否已存在此APN
      */
-    public  void setAPN(String apn) {
+    public void setAPN(String apn) {
         if (mContext == null) {
             Log.e("上下文为空，不执行", "请检查是否已调用setContext()");
             return;
@@ -3318,6 +3492,8 @@ public class ZtlManager {
             int maxVolume = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
             if (index >= 0 && index <= maxVolume)
                 am.setStreamVolume(AudioManager.STREAM_MUSIC, index, AudioManager.FLAG_PLAY_SOUND | AudioManager.FLAG_SHOW_UI);
+//                am.setStreamVolume(AudioManager.STREAM_MUSIC, index, AudioManager.AUDIOFOCUS_NONE);
+//                am.setStreamVolume(AudioManager.STREAM_MUSIC, index, AudioManager.FLAG_PLAY_SOUND | AudioManager.FLAG_SHOW_UI);
 
         } catch (Exception e) {
             e.printStackTrace();

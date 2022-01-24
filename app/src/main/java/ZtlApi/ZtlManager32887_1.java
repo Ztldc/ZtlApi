@@ -160,11 +160,21 @@ public class ZtlManager32887_1 extends ZtlManager {
     }
 
     //设置分辨率		1
+//    HDMI 分辨率支持列表 ：sys/class/drm/card0-HDMI-A-1/modes
+//    HDMI 当前分辨率 ：sys/class/drm/card0-HDMI-A-1/mode
+//    persist.sys.resolution.main（主屏分辨率）
+//    persist.sys.resolution.aux（副屏分辨率）
+//    persist.sys.framebuffer.main（ui分辨率）
+//    如果没有配置ui分辨率，ui分辨率大小和主屏分辨率一致
     @Override
     public void setScreenMode(String mode) {
+
         setSystemProperty("persist.sys.screenmode", mode);
         setSystemProperty("ztl.Screen", "Set");
+
+        setDisplayResolution(mode);
     }
+
 
     //显示-获取HDMI状态
     @Override

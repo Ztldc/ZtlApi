@@ -183,6 +183,26 @@ public class ZtlManagerkt11_32 extends ZtlManager {
     	return null;
     }
 
+
+    //杰发设置SNapi。放到ztlmanagetkt11_32.java
+    @Override
+    public int setBuildSerial(String sn) {
+        ComponentName componetName = new ComponentName(
+                "com.yian.yiansettings",  //这个参数是另外一个app的包名
+                "com.yian.yiansettings.ZTLService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.setPackage("com.yian.yiansettings");
+        intent.putExtra("cmd", "set_sn");
+        intent.putExtra("value", sn);
+        mContext.startService(intent);
+
+        return 0;
+    }
+
+
+
 //	private Context mContext;
 //
 //	private boolean DEBUG_ZTL = true;

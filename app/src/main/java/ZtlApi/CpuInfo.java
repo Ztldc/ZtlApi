@@ -143,8 +143,13 @@ public class CpuInfo {
         }
 
         public static String[] getFreq() {
-            String oneLine = getOnelinevalue("/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies");
-            return oneLine.split(" ");
+            try {
+                String oneLine = getOnelinevalue("/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies");
+                return oneLine.split(" ");
+            } catch (Exception e) {
+                e.printStackTrace();
+                return new String[0];
+            }
         }
 
         public void SetFreq(String freq) {
@@ -826,7 +831,7 @@ public class CpuInfo {
         } else if (devTypeStr.contains("A64")) {
             devType = DevType.dt_A64;
             curDev = new BDA64();
-        } else if (devTypeStr.contains("3568")){
+        } else if (devTypeStr.contains("3568")||devTypeStr.contains("3566")){
             devType = DevType.dt_3568;
             curDev = new BD3568();
         }

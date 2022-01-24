@@ -253,10 +253,14 @@ public class ZtlManagerU202 extends ZtlManager {
             s905d3_gpios.put("GPIOX_19", new s905d3_gpio("GPIOX_19", false, 85));
         }
 
+//        System.out.println("gppo77777777aa:"+s905d3_gpios.size());
+//        System.out.println("gppo77777777bb:"+name);
         if (s905d3_gpios.containsKey(name)) {
+//        if (s905d3_gpios.containsKey(name)) {
+//            System.out.println("gppo77777777dd:"+name);
             return s905d3_gpios.get(name).getValue();
         }
-
+//        System.out.println("gppo77777777cc:"+name);
         return 0;
     }
 
