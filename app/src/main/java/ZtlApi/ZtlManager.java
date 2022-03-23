@@ -87,7 +87,8 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1
-//20220124 API增加设置以太网IP，setEthIP，增加网卡名字
+//20220323 修改3568、3566设置导航栏无效问题
+//20220124 API增加设置以太网IP，setEthIP，增加网卡名字（需要其他设置版本大于等20220121）
 //20211129 API修改4.4 获取有些U盘路径不对问题
 //20211126 API修改3399pro打开OTG的方法,系统开机默认打开
 //20211111 修改U2O2 API设置多屏幕旋转没有重启问题
@@ -210,8 +211,11 @@ public class ZtlManager {
             } else if (devType.contains("3399")) {
                 if (getAndroidVersion().contains("7.1")) {
                     Instance = new ZtlManager33997_1();
-                } else
+                } else if(getAndroidVersion().contains("11")){
+                    Instance = new ZtlManager3568();
+                } else {
                     Instance = new ZtlManager3399Pro();
+                }
             } else if (devType.contains("3288") && getAndroidVersion().contains("7.1")) {
                 Instance = new ZtlManager32887_1();
             } else if (devType.contains("3328")) {
@@ -230,7 +234,7 @@ public class ZtlManager {
                 Instance = new ZtlManagerA40i();
             } else if (devType.contains("u202") || devType.contains("w400")) {
                 Instance = new ZtlManagerU202();
-            } else if (devType.contains("3568") || devType.contains("3566")) {
+            } else if (devType.contains("3568") || devType.contains("3566")|| devType.contains("3588")) {
                 Instance = new ZtlManager3568();
             } else if (devType.contains("kt11")) {
                 Instance = new ZtlManagerkt11_32();
@@ -262,7 +266,12 @@ public class ZtlManager {
 
     //系统-获取设备型号	返回RK3288之类的
     public static String getDeviceVersion() {
-        return android.os.Build.MODEL;
+//        ro.product.model  IC2
+        String model = android.os.Build.MODEL;
+        if (model.equals("IC2")){
+            model="rk3288";
+        }
+        return model;
     }
 
     //系统-获取安卓版本号
@@ -3919,6 +3928,27 @@ public class ZtlManager {
         String state = getSystemProperty("persist.sys.adbState", "1");
         return Integer.valueOf(state).intValue();
     }
+
+    @Deprecated
+    //系统-设置默认输入法
+    public void getDefaultInputMethod(String DefaultInputMethodID) {
+
+        if (mContext == null) {
+            Log.e("上下文为空，不执行", "getDefaultInputMethod请检查是否已调用setContext()");
+            return;
+        }
+        ComponentName componetName = new ComponentName(
+                "com.ztl.helper",  //这个参数是另外一个app的包名
+                "com.ztl.helper.ZTLHelperService");   //这个是要启动的Service的全路径名
+
+        Intent intent = new Intent();
+        intent.setComponent(componetName);
+        intent.putExtra("cmd", "default_input_method");//value填的需要和ztlhelper统一
+        intent.putExtra("id", DefaultInputMethodID);
+
+        mContext.startService(intent);
+    }
+
 
     /**
      * 设置系统日期和时间，老版本的实现 需要系统签名

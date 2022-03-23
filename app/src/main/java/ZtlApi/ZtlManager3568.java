@@ -99,17 +99,36 @@ public class ZtlManager3568 extends ZtlManager {
             Log.e(TAG, "上下文为空,不执行");
             return;
         }
-		if(toPC){
-			setSystemProperty("persist.usb.mode", "1");
-			execRootCmdSilent("echo otg > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
-		}else{
-			setSystemProperty("persist.usb.mode", "2");
-			execRootCmdSilent("echo host > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
-		}
+
+		if (getDeviceVersion().contains("3588")){
+                    //3588
+            if (toPC){
+                setSystemProperty("persist.usb.mode", "1");
+                execRootCmdSilent("echo device > /sys/kernel/debug/usb/fc000000.usb/mode");
+            }else {
+                //接鼠标
+                setSystemProperty("persist.usb.mode", "2");
+
+                execRootCmdSilent("echo host > /sys/kernel/debug/usb/fc000000.usb/mode");
+            }
+
+        }else {
+            if(toPC){
+                setSystemProperty("persist.usb.mode", "1");
+                execRootCmdSilent("echo otg > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
+            }else{
+                setSystemProperty("persist.usb.mode", "2");
+                execRootCmdSilent("echo host > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
+            }
+        }
+
+
        // String value = toPC ? "1" : "2";
         //setSystemProperty("persist.usb.mode", value);
         //writeMethod("/sys/devices/platform/ffe09080.usb3phy/ztl_usb_ctrl/ztl_usb_ctrl", value);
-		
+
+
+
     }
 
     //获取U盘列表
@@ -196,11 +215,23 @@ public class ZtlManager3568 extends ZtlManager {
     @Override
     public boolean getUSBtoPC() {
         try {
-            String state = loadFileAsString("/sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
-            System.out.println("3568 to PC:"+state);
-            if (state.contains("otg")) {//
-                return true;
+            if (getDeviceVersion().contains("3588")){
+                //3588
+                String state = loadFileAsString("/sys/kernel/debug/usb/fc000000.usb/mode");
+                System.out.println("3588 to PC:"+state);
+                if (state.contains("device")) {//
+                    return true;
+                }
+
+            }else {
+                String state = loadFileAsString("/sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
+                System.out.println("3568 to PC:"+state);
+                if (state.contains("otg")) {//
+                    return true;
+                }
             }
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -223,8 +254,10 @@ public class ZtlManager3568 extends ZtlManager {
         }
         Intent systemBarIntent = new Intent("com.ztl.action.systembar");
         systemBarIntent.setPackage("com.android.systemui");
+        systemBarIntent.putExtra("skip_permission", true);
         systemBarIntent.putExtra("enable", bOpen);
         mContext.sendBroadcast(systemBarIntent);
+
     }
 
     //系统-获取当前导航栏状态 显示还是隐藏
