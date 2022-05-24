@@ -296,16 +296,18 @@ public class ZtlManagerU202 extends ZtlManager {
 
         @Override
         public int compareTo(Object o) {
-            rotaionString src = (rotaionString) o;
-            int compare = 0;
-            if (Integer.valueOf(number) < Integer.valueOf(src.number)) {
-                return -1;
-            } else if (Integer.valueOf(number) > Integer.valueOf(src.number)) {
-                return 1;
-            } else if (Integer.valueOf(number) == Integer.valueOf(src.number)) {
-                return tary.compareTo(src.tary);
-            }
-            return compare;
+            return -1;
+//            rotaionString src = (rotaionString) o;
+//            int compare = 0;
+//            if (Integer.valueOf(number) < Integer.valueOf(src.number)) {
+//                return -1;
+//            } else if (Integer.valueOf(number) > Integer.valueOf(src.number)) {
+//                return 1;
+//            } else if (Integer.valueOf(number) == Integer.valueOf(src.number)) {
+//                return tary.compareTo(src.tary);
+//            }
+//            return compare;
+//            return compare;
         }
     }
 

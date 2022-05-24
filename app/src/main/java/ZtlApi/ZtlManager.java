@@ -267,6 +267,32 @@ public class ZtlManager {
     //系统-获取设备型号	返回RK3288之类的
     public static String getDeviceVersion() {
 //        ro.product.model  IC2
+//        persist.ztl.modelvs
+        try {
+            String newModel = "";
+            String sysMode = "ro.ztl.model";
+            try {
+
+                Class clazz = Class.forName("android.os.SystemProperties");
+                Method getter = clazz.getDeclaredMethod("get", String.class);//方法名，参数类型
+                String value = (String) getter.invoke(clazz.newInstance(), sysMode);
+                if (!TextUtils.isEmpty(value)) {
+                    newModel = value;
+                }
+            } catch (Exception e) {
+                String value = execRootCmd("getprop " +
+                        sysMode);
+                if (value.isEmpty() == false) {
+    //                Log.d(TAG, "Unable to read system properties.return" + value);
+                    newModel= value;
+                }
+            }
+            if (!newModel.trim().equals("")){
+                return newModel;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         String model = android.os.Build.MODEL;
         if (model.equals("IC2")){
             model="rk3288";

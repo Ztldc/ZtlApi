@@ -99,28 +99,76 @@ public class ZtlManager3568 extends ZtlManager {
             Log.e(TAG, "上下文为空,不执行");
             return;
         }
+//        3399 3288 Android11 的节点
+//        写1是host，2是otg，这个跟3288 7.1是一样的
+//        private static final String RK3288_OTG_NODE_PATH = "sys/devices/platform/ff770000.syscon/ff770000.syscon:usbphy/phy/phy-ff770000.syscon:usbphy.1/otg_mode";
+//        private static final String RK3399_OTG_NODE_PATH = "/sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode";
+
+        String vale = "1";
+        String vale1 = "otg";
+		String dev = "/sys/devices/platform/fe8a0000.usb2-phy/otg_mode";
 
 		if (getDeviceVersion().contains("3588")){
                     //3588
+            dev = "/sys/kernel/debug/usb/fc000000.usb/mode";
+
             if (toPC){
-                setSystemProperty("persist.usb.mode", "1");
-                execRootCmdSilent("echo device > /sys/kernel/debug/usb/fc000000.usb/mode");
+                vale = "1";
+                vale1 = "device";
+//                setSystemProperty("persist.usb.mode", "1");
+//                execRootCmdSilent("echo device > /sys/kernel/debug/usb/fc000000.usb/mode");
             }else {
                 //接鼠标
-                setSystemProperty("persist.usb.mode", "2");
-
-                execRootCmdSilent("echo host > /sys/kernel/debug/usb/fc000000.usb/mode");
+                vale = "2";
+                vale1 = "host";
+//                setSystemProperty("persist.usb.mode", "2");
+//
+//                execRootCmdSilent("echo host > /sys/kernel/debug/usb/fc000000.usb/mode");
             }
 
+        }else if (getDeviceVersion().contains("3399")){
+            dev = "/sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode";
+
+            if (toPC){
+                vale = "2";
+                vale1 = "otg";
+            }else {
+                //接鼠标
+                vale = "1";
+                vale1 = "host";
+            }
+        }else if (getDeviceVersion().contains("3288")){
+            dev = "sys/devices/platform/ff770000.syscon/ff770000.syscon:usbphy/phy/phy-ff770000.syscon:usbphy.1/otg_mode";
+
+            if (toPC){
+                vale = "2";
+                vale1 = "otg";
+            }else {
+                //接鼠标
+                vale = "1";
+                vale1 = "host";
+            }
         }else {
+            dev = "/sys/devices/platform/fe8a0000.usb2-phy/otg_mode";
+
             if(toPC){
-                setSystemProperty("persist.usb.mode", "1");
-                execRootCmdSilent("echo otg > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
+                vale = "1";
+                vale1 = "otg";
+//                setSystemProperty("persist.usb.mode", "1");
+//                execRootCmdSilent("echo otg > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
             }else{
-                setSystemProperty("persist.usb.mode", "2");
-                execRootCmdSilent("echo host > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
+                vale = "2";
+                vale1 = "host";
+//                setSystemProperty("persist.usb.mode", "2");
+//                execRootCmdSilent("echo host > /sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
             }
         }
+
+        setSystemProperty("persist.usb.mode", vale);
+        execRootCmdSilent("echo " +
+                vale1 +
+                " > " +
+                dev);
 
 
        // String value = toPC ? "1" : "2";
@@ -223,6 +271,18 @@ public class ZtlManager3568 extends ZtlManager {
                     return true;
                 }
 
+            }else if (getDeviceVersion().contains("3399")){
+                String state = loadFileAsString("/sys/devices/platform/ff770000.syscon/ff770000.syscon:usb2-phy@e450/otg_mode");
+                System.out.println("3399 to PC:"+state);
+                if (state.contains("otg")) {//
+                    return true;
+                }
+            }else if (getDeviceVersion().contains("3288")){
+                String state = loadFileAsString("sys/devices/platform/ff770000.syscon/ff770000.syscon:usbphy/phy/phy-ff770000.syscon:usbphy.1/otg_mode");
+                System.out.println("3399 to PC:"+state);
+                if (state.contains("otg")) {//
+                    return true;
+                }
             }else {
                 String state = loadFileAsString("/sys/devices/platform/fe8a0000.usb2-phy/otg_mode");
                 System.out.println("3568 to PC:"+state);
