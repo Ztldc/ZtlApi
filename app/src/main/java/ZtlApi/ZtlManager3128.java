@@ -314,9 +314,9 @@ public class ZtlManager3128 extends ZtlManager {
     public boolean isSystemBarOpen() {
         String state = SystemProperties.get(SYSTEM_BAR_STATE);
         if (state.equals(SYSTEM_BAR_SHOW)) {
-            return false;
-        } else if (state.equals(SYSTEM_BAR_HIDE)) {
             return true;
+        } else if (state.equals(SYSTEM_BAR_HIDE)) {
+            return false;
         }
         return false;
     }

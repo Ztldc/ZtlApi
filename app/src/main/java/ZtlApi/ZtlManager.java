@@ -173,7 +173,7 @@ public class ZtlManager {
      * @return todo 标识颜色：添加内容需要更改版本号
      */
     public String getJARVersion() {
-        return "6.2";
+        return "6.3";
     }
 
     protected Context mContext;
