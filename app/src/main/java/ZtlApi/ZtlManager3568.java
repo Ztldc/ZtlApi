@@ -204,7 +204,7 @@ public class ZtlManager3568 extends ZtlManager {
 
                         String absPath = "/storage/"+ddd[i];
                         if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")
-                                || absPath.equals(getAppRootOfSdCardRemovable())) {
+                                || absPath.equals(getAppRootOfSdCardRemovable())|| absPath.equals(getSataStoragePath())) {
                             continue;
                         } else {
                             File usbFile = new File(absPath);
@@ -246,11 +246,11 @@ public class ZtlManager3568 extends ZtlManager {
                             }
                         }
                     }
-                    //todo 有bug 插入两个U盘的时候返回一个
-                    for (int i = 0; i < Files1.size(); i++) {
-                        Files1 = Collections.singletonList(Files1.get(i));    //udisk0
-                        break;
-                    }
+//                    //todo 有bug 插入两个U盘的时候返回一个
+//                    for (int i = 0; i < Files1.size(); i++) {
+//                        Files1 = Collections.singletonList(Files1.get(i));    //udisk0
+//                        break;
+//                    }
                 }
             }
         } catch (Exception e) {
