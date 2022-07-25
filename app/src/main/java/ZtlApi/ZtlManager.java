@@ -87,6 +87,7 @@ import static java.util.Calendar.MONTH;
 import static java.util.Calendar.YEAR;
 
 //这个类是3288_5.1
+//20220725 修改了S905d3无法获取U盘路径的bug
 //20220719API增加获取SATA路径接口
 //20220323 修改3568、3566设置导航栏无效问题
 //20220124 API增加设置以太网IP，setEthIP，增加网卡名字（需要其他设置版本大于等20220121）

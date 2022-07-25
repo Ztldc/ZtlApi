@@ -498,6 +498,54 @@ public class ZtlManagerU202 extends ZtlManager {
         mContext.startService(intent);
     }
 
+    //获取U盘列表
+    public List<String> getUSBDisks() {
+        String usbPath = null;
+        String usbBasePath = "";
+
+        if (getAndroidVersion().contains("5.1.1") || getAndroidVersion().contains("4.4")) {
+            usbBasePath = "/mnt/usb_storage/";
+        } else {
+            usbBasePath = "/storage/";
+        }
+
+        List<String> Files1 = new ArrayList<>();
+        File file = new File(usbBasePath);
+        try {
+            if (file.exists() && file.isDirectory()) { //open usb_storage
+                File[] files = file.listFiles();
+                if (files.length > 0) {
+                    for (int i = 0; i < files.length; i++) {
+                        String absPath = files[i].getAbsolutePath();
+                        if (absPath.equals("/storage/emulated") || absPath.equals("/storage/self")
+                                || absPath.equals(getAppRootOfSdCardRemovable())) {
+                            continue;
+                        } else {
+                            File usbFile = new File(absPath);
+                            if (usbFile.exists() && usbFile.isDirectory()) {
+                                if (getAndroidVersion().contains("5.1") || getAndroidVersion().contains("4.4")) {
+                                    File[] usbFiles = usbFile.listFiles();
+                                    usbPath = usbFiles[i].getPath();
+                                    Files1.add(usbPath);
+                                } else {
+                                    Files1.add(absPath);
+                                }
+                            }
+                        }
+                    }
+//                    //todo 有bug 插入两个U盘的时候返回一个
+//                    for (int i = 0; i < Files1.size(); i++) {
+//                        Files1 = Collections.singletonList(Files1.get(i));    //udisk0
+//                        break;
+//                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Files1;
+    }
+
     //显示-设置屏幕方向(副屏)
     public void setExtendDisplayOrientation(int rotation) {
         ComponentName componetName = new ComponentName(
@@ -514,6 +562,12 @@ public class ZtlManagerU202 extends ZtlManager {
         intent.putExtra("rotation", rotation);  //这里填要传入的参数，第一个name需要和ztlhelper统一
         intent.putExtra("display", "extend");  //这里填要传入的参数，第一个name需要和ztlhelper统一
         mContext.startService(intent);
+    }
+
+    //系统-隐藏导航栏与状态栏	1
+    @Override
+    public void setCloseSystemBar() {
+        openSystemBar(false);
     }
 
     //系统-打开/关闭导航栏状态栏
